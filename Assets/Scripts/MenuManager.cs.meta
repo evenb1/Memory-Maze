@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 85ca4ed47f1a94648af0ade05c21746e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - titleText: {instanceID: 0}
+  - subtitleText: {instanceID: 0}
+  - playButton: {instanceID: 0}
+  - quitButton: {instanceID: 0}
+  - clickSound: {instanceID: 0}
+  - glitchSound: {instanceID: 0}
+  - typewriterSound: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
