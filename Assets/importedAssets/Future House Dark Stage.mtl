@@ -1,0 +1,33 @@
+#
+## Alias OBJ Material File
+# Exported from SketchUp, (c) 2000-2012 Trimble Navigation Limited
+
+newmtl _Charcoal_1
+Ka 0.000000 0.000000 0.000000
+Kd 0.039216 0.039216 0.039216
+Ks 0.330000 0.330000 0.330000
+
+newmtl Chris_Skin
+Ka 0.000000 0.000000 0.000000
+Kd 1.000000 1.000000 1.000000
+Ks 0.330000 0.330000 0.330000
+d 0.050000
+
+newmtl background_wallpapers_for_pc_1
+Ka 0.000000 0.000000 0.000000
+Kd 0.560784 0.035294 0.466667
+Ks 0.330000 0.330000 0.330000
+map_Kd Future House Dark Stage/background_wallpapers_for_pc_1.jpg
+
+newmtl M_6935544_blue_backgrounds_hd
+Ka 0.000000 0.000000 0.000000
+Kd 0.631373 0.062745 0.450980
+Ks 0.330000 0.330000 0.330000
+map_Kd Future House Dark Stage/M_6935544_blue_backgrounds_hd.jpg
+
+newmtl gfdfd
+Ka 0.000000 0.000000 0.000000
+Kd 0.501961 0.501961 0.501961
+Ks 0.000000 0.000000 0.000000
+map_Kd Future House Dark Stage/gfdfd.png
+

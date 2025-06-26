@@ -18,7 +18,6 @@ public class PlayerController : MonoBehaviour
     
     void Update()
     {
-        // Mouse look
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
         
@@ -28,7 +27,6 @@ public class PlayerController : MonoBehaviour
         verticalRotation = Mathf.Clamp(verticalRotation, -90, 90);
         playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0, 0);
         
-        // Movement
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
         
