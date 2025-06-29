@@ -7,16 +7,18 @@ public class ExitTrigger : MonoBehaviour
     public int currentLevel = 1;
     public int maxLevels = 4;
     
-    [Header("Visual Effects")]
-    public GameObject activationEffect;
-    public Material inactiveMaterial;
-    public Material activeMaterial;
+    [Header("Extraction Settings")]
+    public float extractionEffectTime = 2f;
+    public float fadeOutTime = 1f;
+    public float centerRadius = 1f; // How close to center player needs to be
     
     [Header("Audio")]
     public AudioClip activationSound;
-    public AudioClip exitSound;
+    public AudioClip teleportSound;
     
     private bool isActivated = false;
+    private bool hasTriggered = false;
+    private Transform playerInPortal = null;
     private GameManager gameManager;
     private Renderer platformRenderer;
     private AudioSource audioSource;
@@ -24,7 +26,6 @@ public class ExitTrigger : MonoBehaviour
     
     void Start()
     {
-        // Get current level from scene name
         string sceneName = SceneManager.GetActiveScene().name;
         if (sceneName.Contains("Level"))
         {
@@ -35,7 +36,6 @@ public class ExitTrigger : MonoBehaviour
             }
         }
         
-        // Setup components
         platformRenderer = GetComponent<Renderer>();
         audioSource = GetComponent<AudioSource>();
         beacon = GetComponent<PortalBeacon>();
@@ -46,24 +46,263 @@ public class ExitTrigger : MonoBehaviour
         }
         audioSource.volume = 0.7f;
         
-        // Find GameManager
-        gameManager = GameManager.Instance;
-        if (gameManager == null)
-        {
-            gameManager = FindObjectOfType<GameManager>();
-        }
+        gameManager = FindFirstObjectByType<GameManager>();
         
-        // Ensure it has a trigger collider
         Collider col = GetComponent<Collider>();
         if (col != null)
         {
             col.isTrigger = true;
         }
         
-        // Start deactivated
         SetExitState(false);
         
-        Debug.Log($"Exit trigger initialized for Level {currentLevel} (Max: {maxLevels})");
+        Debug.Log($"Exit trigger initialized for Level {currentLevel}");
+    }
+    
+    void Update()
+    {
+        // Check if player is in portal and close to center
+        if (playerInPortal != null && !hasTriggered && isActivated)
+        {
+            float distanceFromCenter = Vector3.Distance(
+                new Vector3(playerInPortal.position.x, transform.position.y, playerInPortal.position.z),
+                transform.position
+            );
+            
+            if (distanceFromCenter <= centerRadius)
+            {
+                Debug.Log("Player reached portal center! Starting extraction...");
+                hasTriggered = true;
+                StartExtractionSequence(playerInPortal);
+            }
+        }
+    }
+    
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player") && !hasTriggered)
+        {
+            Debug.Log($"=== PLAYER TOUCHED PORTAL ===");
+            Debug.Log($"isActivated: {isActivated}");
+            
+            if (!isActivated)
+            {
+                Debug.Log("Portal not yet activated - collect all fragments first!");
+                if (gameManager != null)
+                {
+                    gameManager.UpdateStatusMessage("Collect all memory fragments before escaping!");
+                }
+                return;
+            }
+            
+            // Don't trigger immediately - let player walk to center
+            playerInPortal = other.transform;
+            Debug.Log("Player entered portal area - walk to center to activate extraction...");
+            
+            if (gameManager != null)
+            {
+                gameManager.UpdateStatusMessage("Move to the center of the portal to begin extraction!");
+            }
+        }
+    }
+    
+    void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            playerInPortal = null;
+            Debug.Log("Player left portal area");
+            
+            if (gameManager != null && isActivated && !hasTriggered)
+            {
+                gameManager.UpdateStatusMessage("ALL FRAGMENTS COLLECTED! Proceed to the glowing EXIT PORTAL!");
+            }
+        }
+    }
+    
+    void StartExtractionSequence(Transform player)
+    {
+        Debug.Log("Player reached portal center! Starting extraction...");
+        
+        // IMMEDIATELY stop the game to prevent virus from catching player
+        Time.timeScale = 0f;
+        
+        // Disable player movement
+        PlayerController playerController = player.GetComponent<PlayerController>();
+        if (playerController != null)
+        {
+            playerController.enabled = false;
+        }
+        
+        // Show cursor since game is paused
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        
+        // Play teleport sound (use PlayOneShot which works during Time.timeScale = 0)
+        if (audioSource != null && teleportSound != null)
+        {
+            audioSource.PlayOneShot(teleportSound);
+        }
+        
+        // Show extraction message
+        if (gameManager != null)
+        {
+            gameManager.UpdateStatusMessage("EXTRACTION COMPLETE! Well done!");
+        }
+        
+        // Start effects and completion (using real time)
+        StartCoroutine(ExtractionEffectsAndComplete(player));
+    }
+    
+    System.Collections.IEnumerator ExtractionEffectsAndComplete(Transform player)
+    {
+        // Create extraction effect
+        GameObject extractionEffect = CreateExtractionEffect(player);
+        
+        // Wait using real time (unaffected by Time.timeScale)
+        yield return new WaitForSecondsRealtime(extractionEffectTime);
+        
+        // Start fade out
+        StartCoroutine(FadeOut());
+        
+        // Wait for fade to complete
+        yield return new WaitForSecondsRealtime(fadeOutTime);
+        
+        // Clean up effect
+        if (extractionEffect != null)
+        {
+            Destroy(extractionEffect);
+        }
+        
+        // Restore time scale before scene transition
+        Time.timeScale = 1f;
+        
+        // Complete the level
+        CompleteLevel();
+    }
+    
+    GameObject CreateExtractionEffect(Transform player)
+    {
+        GameObject effect = new GameObject("ExtractionEffect");
+        effect.transform.position = player.position;
+        
+        // Create upward particle beam with cyan color
+        ParticleSystem particles = effect.AddComponent<ParticleSystem>();
+        var main = particles.main;
+        main.startColor = Color.cyan; // Force cyan color
+        main.startSpeed = 10f;
+        main.startSize = 0.2f;
+        main.maxParticles = 150;
+        main.startLifetime = 3f;
+        
+        var emission = particles.emission;
+        emission.rateOverTime = 75f;
+        
+        var shape = particles.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = 0.8f; // Smaller radius
+        
+        var velocityOverLifetime = particles.velocityOverLifetime;
+        velocityOverLifetime.enabled = true;
+        velocityOverLifetime.space = ParticleSystemSimulationSpace.Local;
+        velocityOverLifetime.y = 20f;
+        
+        // Add bright cyan light
+        Light extractionLight = effect.AddComponent<Light>();
+        extractionLight.type = LightType.Point;
+        extractionLight.color = Color.cyan;
+        extractionLight.intensity = 12f;
+        extractionLight.range = 10f;
+        
+        // Make player glow cyan
+        StartCoroutine(MakePlayerGlow(player));
+        
+        return effect;
+    }
+    
+    System.Collections.IEnumerator MakePlayerGlow(Transform player)
+    {
+        Renderer playerRenderer = player.GetComponentInChildren<Renderer>();
+        if (playerRenderer != null)
+        {
+            Material originalMaterial = playerRenderer.material;
+            
+            // Create cyan glowing material
+            Material glowMaterial = new Material(originalMaterial);
+            glowMaterial.EnableKeyword("_EMISSION");
+            glowMaterial.SetColor("_EmissionColor", Color.cyan * 1.5f);
+            
+            playerRenderer.material = glowMaterial;
+            
+            yield return new WaitForSecondsRealtime(extractionEffectTime);
+            
+            // Restore original material
+            playerRenderer.material = originalMaterial;
+        }
+    }
+    
+    System.Collections.IEnumerator FadeOut()
+    {
+        // Create a black overlay to fade to black
+        GameObject fadePanel = new GameObject("FadePanel");
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas != null)
+        {
+            fadePanel.transform.SetParent(canvas.transform);
+        }
+        
+        UnityEngine.UI.Image fadeImage = fadePanel.AddComponent<UnityEngine.UI.Image>();
+        fadeImage.color = new Color(0, 0, 0, 0); // Start transparent
+        
+        // Set to full screen
+        RectTransform rect = fadePanel.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        
+        // Fade to black
+        float timer = 0f;
+        while (timer < fadeOutTime)
+        {
+            timer += Time.unscaledDeltaTime; // Use unscaled time
+            float alpha = timer / fadeOutTime;
+            fadeImage.color = new Color(0, 0, 0, alpha);
+            yield return null;
+        }
+        
+        fadeImage.color = Color.black; // Ensure fully black
+    }
+    
+    void CompleteLevel()
+    {
+        // Setup story transition
+        PlayerPrefs.SetInt("CompletedLevel", currentLevel);
+        PlayerPrefs.SetInt("StoryLevel", currentLevel);
+        
+        if (currentLevel >= maxLevels)
+        {
+            PlayerPrefs.SetString("StoryType", "GameComplete");
+            PlayerPrefs.SetString("NextScene", "MainMenu");
+        }
+        else
+        {
+            PlayerPrefs.SetString("StoryType", "LevelComplete");
+            PlayerPrefs.SetString("NextScene", $"Level{currentLevel + 1}");
+        }
+        
+        PlayerPrefs.Save();
+        
+        Debug.Log($"Level {currentLevel} completed! Loading story transition...");
+        
+        // Notify GameManager of completion
+        if (gameManager != null)
+        {
+            gameManager.PlayerReachedExit();
+        }
+        
+        // Load story transition
+        SceneManager.LoadScene("StoryTransition");
     }
     
     public void ActivateExit()
@@ -73,29 +312,18 @@ public class ExitTrigger : MonoBehaviour
         isActivated = true;
         Debug.Log($"Exit portal activated for Level {currentLevel}!");
         
-        // Change visual state
         SetExitState(true);
         
-        // Activate beacon if present
         if (beacon != null)
         {
             beacon.ActivateBeacon();
         }
         
-        // Play activation sound
         if (audioSource != null && activationSound != null)
         {
             audioSource.PlayOneShot(activationSound);
         }
         
-        // Spawn activation effect
-        if (activationEffect != null)
-        {
-            GameObject effect = Instantiate(activationEffect, transform.position, transform.rotation);
-            Destroy(effect, 3f);
-        }
-        
-        // Start pulsing animation
         StartCoroutine(PulseEffect());
     }
     
@@ -105,103 +333,33 @@ public class ExitTrigger : MonoBehaviour
         {
             if (active)
             {
-                // Use level theme color
-                Color themeColor = LevelConfigs.GetLevelThemeColor(currentLevel);
-                
-                if (activeMaterial != null)
-                {
-                    platformRenderer.material = activeMaterial;
-                }
-                else
-                {
-                    // Create glowing material with level theme
-                    Material glowMat = new Material(Shader.Find("Standard"));
-                    glowMat.color = themeColor;
-                    glowMat.EnableKeyword("_EMISSION");
-                    glowMat.SetColor("_EmissionColor", themeColor * 0.8f);
-                    platformRenderer.material = glowMat;
-                }
+                Material glowMat = new Material(Shader.Find("Standard"));
+                glowMat.color = Color.cyan; // Changed to cyan
+                glowMat.EnableKeyword("_EMISSION");
+                glowMat.SetColor("_EmissionColor", Color.cyan * 0.8f);
+                platformRenderer.material = glowMat;
             }
             else
             {
-                if (inactiveMaterial != null)
-                {
-                    platformRenderer.material = inactiveMaterial;
-                }
-                else
-                {
-                    Material inactiveMat = new Material(Shader.Find("Standard"));
-                    inactiveMat.color = Color.gray;
-                    platformRenderer.material = inactiveMat;
-                }
+                Material inactiveMat = new Material(Shader.Find("Standard"));
+                inactiveMat.color = Color.gray;
+                platformRenderer.material = inactiveMat;
             }
         }
     }
     
     System.Collections.IEnumerator PulseEffect()
     {
-        Color themeColor = LevelConfigs.GetLevelThemeColor(currentLevel);
-        
         while (isActivated && platformRenderer != null)
         {
             if (platformRenderer.material.HasProperty("_EmissionColor"))
             {
                 float intensity = (Mathf.Sin(Time.time * 2f) + 1f) * 0.4f + 0.4f;
-                platformRenderer.material.SetColor("_EmissionColor", themeColor * intensity);
+                platformRenderer.material.SetColor("_EmissionColor", Color.cyan * intensity);
             }
             yield return null;
         }
     }
-    
-    void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Player"))
-        {
-            if (!isActivated)
-            {
-                Debug.Log("Portal not yet activated - collect all fragments first!");
-                
-                if (gameManager != null)
-                {
-                    gameManager.PlayerReachedExit();
-                }
-                return;
-            }
-            
-            Debug.Log($"Player reached the activated portal for Level {currentLevel}!");
-            
-            // Play exit sound
-            if (audioSource != null && exitSound != null)
-            {
-                audioSource.PlayOneShot(exitSound);
-            }
-            
-            // Handle level completion
-            CompleteLevel();
-        }
-    }
-    
-void CompleteLevel()
-{
-    // Setup story data
-    PlayerPrefs.SetInt("StoryLevel", currentLevel);
-    
-    if (currentLevel >= maxLevels)
-    {
-        PlayerPrefs.SetString("StoryType", "GameComplete");
-        PlayerPrefs.SetString("NextScene", "MainMenu");
-    }
-    else
-    {
-        PlayerPrefs.SetString("StoryType", "LevelComplete");
-        PlayerPrefs.SetString("NextScene", $"Level{currentLevel + 1}");
-    }
-    
-    PlayerPrefs.Save();
-    
-    // Load story transition scene (index 2)
-    SceneManager.LoadScene("StoryTransition");
-}
     
     public bool IsActivated()
     {

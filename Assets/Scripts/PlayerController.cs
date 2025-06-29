@@ -2,37 +2,95 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public float moveSpeed = 5.0f;
-    public float mouseSensitivity = 2.0f;
+    [Header("Movement")]
+    public float moveSpeed = 3f;
+    public float rotationSpeed = 5f;
+    
+    [Header("Simple Camera")]
+    public float mouseSensitivity = 2f;
+    
     private CharacterController controller;
+    private Animator animator;
     private Camera playerCamera;
-    private float verticalRotation = 0;
+    private float cameraRotationY = 0f;
     
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        playerCamera = GetComponentInChildren<Camera>();
+        animator = GetComponent<Animator>();
+        playerCamera = Camera.main;
         
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
     
     void Update()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Cursor.lockState = Cursor.lockState == CursorLockMode.Locked ? 
+                CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = !Cursor.visible;
+        }
         
-        transform.Rotate(0, mouseX, 0);
-        
-        verticalRotation -= mouseY;
-        verticalRotation = Mathf.Clamp(verticalRotation, -90, 90);
-        playerCamera.transform.localRotation = Quaternion.Euler(verticalRotation, 0, 0);
-        
+        HandleMovement();
+        HandleSimpleCamera();
+    }
+    
+    void HandleMovement()
+    {
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
         
-        Vector3 movement = transform.TransformDirection(new Vector3(horizontal, 0, vertical));
-        movement = movement.normalized * moveSpeed * Time.deltaTime;
+        // Movement relative to camera direction
+        Vector3 forward = playerCamera.transform.forward;
+        Vector3 right = playerCamera.transform.right;
+        forward.y = 0; // Keep movement horizontal
+        right.y = 0;
+        forward.Normalize();
+        right.Normalize();
         
-        controller.Move(movement);
+        Vector3 moveDirection = (forward * vertical + right * horizontal).normalized;
+        
+        if (moveDirection.magnitude > 0.1f)
+        {
+            // Move character
+            controller.Move(moveDirection * moveSpeed * Time.deltaTime);
+            
+            // Rotate character to face movement direction
+            transform.rotation = Quaternion.Slerp(transform.rotation, 
+                Quaternion.LookRotation(moveDirection), rotationSpeed * Time.deltaTime);
+            
+            if (animator != null)
+            {
+                animator.SetFloat("Blend", 0.5f); // Walking animation
+            }
+        }
+        else
+        {
+            if (animator != null)
+            {
+                animator.SetFloat("Blend", 0f); // Idle animation
+            }
+        }
     }
+    
+    void HandleSimpleCamera()
+{
+    if (playerCamera == null) return;
+    
+    // Mouse rotation around Y axis only
+    if (Cursor.lockState == CursorLockMode.Locked)
+    {
+        cameraRotationY += Input.GetAxis("Mouse X") * mouseSensitivity;
+    }
+    
+    // Fixed camera position (no smoothing)
+    Vector3 offset = new Vector3(0, 1.2f, -1.8f);
+    Vector3 rotatedOffset = Quaternion.Euler(0, cameraRotationY, 0) * offset;
+    
+    // Direct positioning (no lerp)
+    playerCamera.transform.position = transform.position + rotatedOffset;
+    playerCamera.transform.LookAt(transform.position + Vector3.up * 1f);
+}
 }

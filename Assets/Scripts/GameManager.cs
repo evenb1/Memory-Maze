@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-
+using TMPro;
 public class GameManager : MonoBehaviour
 {
     [Header("Game Settings")]
@@ -9,12 +9,12 @@ public class GameManager : MonoBehaviour
     public int collectedFragments = 0;
     
     [Header("UI Elements")]
-    public Text fragmentCounterText;
-    public Text winText;
-    public Text statusText; // For showing messages to player
+    public TextMeshProUGUI fragmentCounterText; // Changed to TextMeshProUGUI
+    public TextMeshProUGUI winText;             // Also change this
+    public TextMeshProUGUI statusText;  
     
     [Header("Exit Platform")]
-    public GameObject exitPlatform; // The exit portal object
+    public GameObject exitPlatform;
     
     [Header("Audio")]
     public AudioSource audioSource;
@@ -25,14 +25,12 @@ public class GameManager : MonoBehaviour
     
     private bool allFragmentsCollected = false;
     private bool gameEnded = false;
-    private PortalBeacon portalBeacon; // Reference to the beacon
+    private PortalBeacon portalBeacon;
     
-    // Singleton pattern for easy access
     public static GameManager Instance { get; private set; }
     
     void Awake()
     {
-        // Singleton setup
         if (Instance == null)
         {
             Instance = this;
@@ -46,7 +44,6 @@ public class GameManager : MonoBehaviour
     
     void Start()
     {
-        // Initialize audio if not assigned
         if (audioSource == null)
         {
             audioSource = GetComponent<AudioSource>();
@@ -56,114 +53,135 @@ public class GameManager : MonoBehaviour
             }
         }
         
-        // Reset game state
         collectedFragments = 0;
         allFragmentsCollected = false;
         gameEnded = false;
         
-        // Find the portal beacon
-        portalBeacon = FindObjectOfType<PortalBeacon>();
+portalBeacon = FindFirstObjectByType<PortalBeacon>();
         
-        // Initialize UI
         UpdateUI();
         UpdateStatusMessage("Collect all memory fragments to activate the exit portal!");
         
-        // Make sure exit portal starts inactive
         if(exitPlatform != null)
         {
             SetExitPlatformState(false);
         }
         
-        // Enable cursor lock for gameplay
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         
         Debug.Log($"GameManager initialized - Need to collect {totalFragments} fragments");
-        Debug.Log($"Portal beacon found: {(portalBeacon != null ? "YES" : "NO")}");
+        Debug.Log($"Fragment Counter Text assigned: {(fragmentCounterText != null)}");
     }
     
-public void CollectFragment()
-{
-    if (gameEnded) return;
-    
-    collectedFragments++;
-    Debug.Log($"Fragment collected! Progress: {collectedFragments}/{totalFragments}");
-    Debug.Log($"UPDATING UI - Fragment counter should show: Memory Fragments: {collectedFragments}/{totalFragments}"); // ADD THIS LINE
-    
-    // Play collection sound
-    if (audioSource != null && fragmentCollectedSound != null)
+    public void CollectFragment()
     {
-        audioSource.PlayOneShot(fragmentCollectedSound);
-    }
-    
-    // Update UI
-    UpdateUI();
+        if (gameEnded) return;
         
-        // Check if all fragments collected
+        collectedFragments++;
+        Debug.Log($"=== FRAGMENT COLLECTED ===");
+        Debug.Log($"Progress: {collectedFragments}/{totalFragments}");
+        Debug.Log($"fragmentCounterText is: {(fragmentCounterText != null ? "ASSIGNED" : "NULL")}");
+        
+        if (audioSource != null && fragmentCollectedSound != null)
+        {
+            audioSource.PlayOneShot(fragmentCollectedSound);
+        }
+        
+        UpdateUI();
+        
         if(collectedFragments >= totalFragments)
         {
             AllFragmentsCollected();
         }
         else
         {
-            // Show progress message
             int remaining = totalFragments - collectedFragments;
             UpdateStatusMessage($"Fragment acquired! {remaining} fragments remaining...");
             
-            // Make virus faster (if you want progressive difficulty)
-            VirusAI virus = FindObjectOfType<VirusAI>();
+VirusAI virus = FindFirstObjectByType<VirusAI>();
             if (virus != null)
             {
-                virus.moveSpeed += 0.3f; // Increase virus speed slightly
-                Debug.Log($"Virus speed increased to {virus.moveSpeed}");
+                virus.IncreaseSpeed(0.3f);
             }
         }
     }
     
-    void AllFragmentsCollected()
+    void UpdateUI()
     {
-        allFragmentsCollected = true;
-        Debug.Log("All fragments collected! Exit portal activated!");
-        
-        // Play special sound
-        if (audioSource != null && allFragmentsSound != null)
+        Debug.Log("=== UPDATE UI CALLED ===");
+        if(fragmentCounterText != null)
         {
-            audioSource.PlayOneShot(allFragmentsSound);
-        }
-        
-        // ACTIVATE THE PORTAL BEACON!
-        if (portalBeacon != null)
-        {
-            portalBeacon.OnAllFragmentsCollected();
+            string newText = $"Memory Fragments: {collectedFragments}/{totalFragments}";
+            fragmentCounterText.text = newText;
+            Debug.Log($"UI text should now be: {newText}");
+            Debug.Log($"Actual UI text is: {fragmentCounterText.text}");
+            
+            if (collectedFragments == totalFragments)
+            {
+                fragmentCounterText.color = Color.green;
+            }
+            else if (collectedFragments > totalFragments / 2)
+            {
+                fragmentCounterText.color = Color.yellow;
+            }
+            else
+            {
+                fragmentCounterText.color = Color.white;
+            }
         }
         else
         {
-            Debug.LogWarning("Portal beacon not found! Searching again...");
-            portalBeacon = FindObjectOfType<PortalBeacon>();
-            if (portalBeacon != null)
-            {
-                portalBeacon.OnAllFragmentsCollected();
-            }
+            Debug.LogError("fragmentCounterText is NULL! UI not assigned in GameManager!");
         }
-        
-        // Activate exit platform
-        if(exitPlatform != null)
-        {
-            SetExitPlatformState(true);
-        }
-        
-        // Update UI messages
-        UpdateStatusMessage("ALL FRAGMENTS COLLECTED! Proceed to the glowing EXIT PORTAL!");
-        
-        if(fragmentCounterText != null)
-        {
-            fragmentCounterText.text = "All fragments collected! Find the glowing portal!";
-            fragmentCounterText.color = Color.green; // Change to green
-        }
-        
-        // Flash the status message
-        StartCoroutine(FlashStatusMessage());
     }
+    
+    void AllFragmentsCollected()
+{
+    allFragmentsCollected = true;
+    Debug.Log("All fragments collected! Exit portal activated!");
+    
+    if (audioSource != null && allFragmentsSound != null)
+    {
+        audioSource.PlayOneShot(allFragmentsSound);
+    }
+    
+    // ACTIVATE THE PORTAL BEACON
+    if (portalBeacon != null)
+    {
+        portalBeacon.OnAllFragmentsCollected();
+        Debug.Log("Beacon activated!");
+    }
+    
+    // ALSO ACTIVATE THE EXIT TRIGGER - THIS WAS MISSING!
+    ExitTrigger exitTrigger = FindFirstObjectByType<ExitTrigger>();
+    if (exitTrigger != null)
+    {
+        exitTrigger.OnAllFragmentsCollected();
+        Debug.Log("Exit trigger activated!");
+    }
+    else
+    {
+        Debug.LogError("ExitTrigger not found!");
+    }
+    
+    // Activate exit platform
+    if(exitPlatform != null)
+    {
+        SetExitPlatformState(true);
+    }
+    
+    // Rest of your existing code...
+    UpdateStatusMessage("ALL FRAGMENTS COLLECTED! Proceed to the glowing EXIT PORTAL!");
+    
+    if(fragmentCounterText != null)
+    {
+        fragmentCounterText.text = "All fragments collected! Find the glowing portal!";
+        fragmentCounterText.color = Color.green;
+    }
+    
+    StartCoroutine(FlashStatusMessage());
+}
     
     System.Collections.IEnumerator FlashStatusMessage()
     {
@@ -179,27 +197,22 @@ public void CollectFragment()
             yield return new WaitForSeconds(0.4f);
         }
         
-        statusText.color = Color.green; // Leave it green
+        statusText.color = Color.green;
     }
     
     void SetExitPlatformState(bool active)
     {
-        if (exitPlatform != null)
+        if (exitPlatform != null && active)
         {
-            // Don't use SetActive anymore since portal is always visible
-            // Just make it glow when activated
-            if (active)
+            Renderer renderer = exitPlatform.GetComponent<Renderer>();
+            if (renderer != null)
             {
-                Renderer renderer = exitPlatform.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    Material mat = renderer.material;
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", Color.green * 0.5f);
-                }
-                
-                Debug.Log("Exit portal activated and glowing!");
+                Material mat = renderer.material;
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", Color.green * 0.5f);
             }
+            
+            Debug.Log("Exit portal activated and glowing!");
         }
     }
     
@@ -218,29 +231,7 @@ public void CollectFragment()
         }
     }
     
-    void UpdateUI()
-    {
-        if(fragmentCounterText != null)
-        {
-            fragmentCounterText.text = $"Memory Fragments: {collectedFragments}/{totalFragments}";
-            
-            // Change color based on progress
-            if (collectedFragments == totalFragments)
-            {
-                fragmentCounterText.color = Color.green;
-            }
-            else if (collectedFragments > totalFragments / 2)
-            {
-                fragmentCounterText.color = Color.yellow;
-            }
-            else
-            {
-                fragmentCounterText.color = Color.white;
-            }
-        }
-    }
-    
-    void UpdateStatusMessage(string message)
+public void UpdateStatusMessage(string message)
     {
         if(statusText != null)
         {
@@ -254,37 +245,31 @@ public void CollectFragment()
         if (gameEnded) return;
         
         gameEnded = true;
-        Debug.Log("YOU WIN! Bit-27 has escaped the corrupted memory!");
+        Debug.Log("YOU WIN! Player has escaped!");
         
-        // Play win sound
         if (audioSource != null && winSound != null)
         {
             audioSource.PlayOneShot(winSound);
         }
         
-        // Show win message
         if(winText != null)
         {
-            winText.text = "SUCCESS! Bit-27 has escaped the corrupted memory system!";
+            winText.text = "SUCCESS! You have escaped!";
             winText.gameObject.SetActive(true);
         }
         
-        UpdateStatusMessage("ESCAPE SUCCESSFUL! Data recovery complete!");
+        UpdateStatusMessage("ESCAPE SUCCESSFUL! Game complete!");
         
-        // Pause game
         Time.timeScale = 0;
-        
-        // Show cursor for any UI interactions
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         
-        // Auto restart after 5 seconds (optional)
         StartCoroutine(AutoRestart());
     }
     
     System.Collections.IEnumerator AutoRestart()
     {
-        yield return new WaitForSecondsRealtime(5f); // Wait 5 seconds in real time
+        yield return new WaitForSecondsRealtime(5f);
         RestartLevel();
     }
     
@@ -293,9 +278,8 @@ public void CollectFragment()
         if (gameEnded) return;
         
         gameEnded = true;
-        Debug.Log("GAME OVER! Bit-27 was caught by the virus!");
+        Debug.Log("GAME OVER! Player was caught!");
         
-        // Play game over sound
         if (audioSource != null && gameOverSound != null)
         {
             audioSource.PlayOneShot(gameOverSound);
@@ -303,44 +287,38 @@ public void CollectFragment()
         
         if(winText != null)
         {
-            winText.text = "GAME OVER! Virus caught Bit-27!";
+            winText.text = "GAME OVER! You were caught!";
             winText.color = Color.red;
             winText.gameObject.SetActive(true);
         }
         
-        UpdateStatusMessage("SYSTEM COMPROMISED! Virus corrupted the data!");
+        UpdateStatusMessage("SYSTEM COMPROMISED! Try again!");
         
-        // Pause game
         Time.timeScale = 0;
-        
-        // Show cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         
-        // Auto restart after 3 seconds
         StartCoroutine(AutoRestartGameOver());
     }
     
     System.Collections.IEnumerator AutoRestartGameOver()
     {
-        yield return new WaitForSecondsRealtime(3f); // Wait 3 seconds
+        yield return new WaitForSecondsRealtime(3f);
         RestartLevel();
     }
     
-    // Public methods for UI buttons or other scripts
     public void RestartLevel()
     {
-        Time.timeScale = 1f; // Resume time
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
     
     public void ReturnToMainMenu()
     {
-        Time.timeScale = 1f; // Resume time
+        Time.timeScale = 1f;
         SceneManager.LoadScene("MainMenu");
     }
     
-    // Getters for other scripts
     public bool AreAllFragmentsCollected()
     {
         return allFragmentsCollected;

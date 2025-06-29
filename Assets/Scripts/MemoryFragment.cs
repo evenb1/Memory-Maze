@@ -3,19 +3,26 @@ using UnityEngine;
 public class MemoryFragment : MonoBehaviour
 {
     public float rotateSpeed = 50f;
-    public float collectionRadius = 1.5f; // How close you need to be
+    public float collectionRadius = 2f; // Increased radius
     private GameManager gameManager;
     private bool collected = false;
     private Transform player;
     
     void Start()
     {
-        gameManager = FindObjectOfType<GameManager>();
+gameManager = FindFirstObjectByType<GameManager>();
         
-        // Find player
-        GameObject playerObj = GameObject.Find("Player");
-        if(playerObj == null) playerObj = GameObject.Find("Bit27");
-        if(playerObj != null) player = playerObj.transform;
+        // Find player by tag - most reliable
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        if(playerObj != null) 
+        {
+            player = playerObj.transform;
+            Debug.Log($"Fragment found player: {playerObj.name}");
+        }
+        else
+        {
+            Debug.LogError("Fragment cannot find player! Make sure player is tagged 'Player'");
+        }
         
         MakeFragmentGlow();
         MakeCollectionEasier();
@@ -29,32 +36,65 @@ public class MemoryFragment : MonoBehaviour
         float newY = Mathf.Sin(Time.time * 3f) * 0.3f + 1f;
         transform.position = new Vector3(transform.position.x, newY, transform.position.z);
         
-        // Check distance to player every frame (more reliable than OnTriggerEnter)
+        // Check distance to player every frame
         if(!collected && player != null)
         {
             float distance = Vector3.Distance(transform.position, player.position);
             if(distance <= collectionRadius)
             {
+                Debug.Log("Fragment collected by distance check!");
                 CollectFragment();
             }
         }
     }
     
+    // Also add trigger detection as backup
+    void OnTriggerEnter(Collider other)
+    {
+        if (!collected && other.CompareTag("Player"))
+        {
+            Debug.Log("Fragment collected by trigger!");
+            CollectFragment();
+        }
+    }
+    
     void CollectFragment()
     {
+        if (collected) return; // Prevent double collection
+        
         collected = true;
         CreateCollectionEffect();
-        gameManager.CollectFragment();
+        
+        if (gameManager != null)
+        {
+            gameManager.CollectFragment();
+        }
+        else
+        {
+            Debug.LogError("GameManager not found!");
+        }
+        
         Destroy(gameObject);
     }
     
     void MakeCollectionEasier()
     {
-        // Make the trigger area bigger
-        SphereCollider collider = GetComponent<SphereCollider>();
-        if(collider != null)
+        // Ensure fragment has a trigger collider
+        Collider col = GetComponent<Collider>();
+        if (col == null)
         {
-            collider.radius = collectionRadius; // Much bigger trigger area
+            SphereCollider sphereCol = gameObject.AddComponent<SphereCollider>();
+            sphereCol.isTrigger = true;
+            sphereCol.radius = collectionRadius;
+            Debug.Log("Added trigger collider to fragment");
+        }
+        else
+        {
+            col.isTrigger = true;
+            if (col is SphereCollider sphereCol)
+            {
+                sphereCol.radius = collectionRadius;
+            }
         }
     }
     
@@ -81,9 +121,12 @@ public class MemoryFragment : MonoBehaviour
     void MakeFragmentGlow()
     {
         Renderer renderer = GetComponent<Renderer>();
-        Material glowMat = new Material(renderer.material);
-        glowMat.EnableKeyword("_EMISSION");
-        glowMat.SetColor("_EmissionColor", Color.yellow * 2f);
-        renderer.material = glowMat;
+        if (renderer != null)
+        {
+            Material glowMat = new Material(renderer.sharedMaterial);
+            glowMat.EnableKeyword("_EMISSION");
+            glowMat.SetColor("_EmissionColor", Color.yellow * 2f);
+            renderer.material = glowMat;
+        }
     }
 }

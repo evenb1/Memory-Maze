@@ -4,7 +4,7 @@ public class PortalBeacon : MonoBehaviour
 {
     [Header("Beacon Settings")]
     public float beamHeight = 20f;
-    public float beamWidth = 2f;
+    public float beamRadius = 1f; // Changed from width to radius
     public Color beamColor = Color.cyan;
     public float pulseSpeed = 2f;
     public bool isActive = false;
@@ -13,7 +13,7 @@ public class PortalBeacon : MonoBehaviour
     public AudioClip activationSound;
     public AudioClip ambientHum;
     
-    private LineRenderer beamRenderer;
+    private GameObject beamCylinder; // 3D beam instead of LineRenderer
     private AudioSource audioSource;
     private Light beaconLight;
     private ParticleSystem particles;
@@ -21,18 +21,13 @@ public class PortalBeacon : MonoBehaviour
     void Start()
     {
         SetupBeacon();
-        SetBeaconState(false); // Start inactive
+        SetBeaconState(false);
     }
     
     void SetupBeacon()
     {
-        // Create line renderer for beam
-        beamRenderer = gameObject.AddComponent<LineRenderer>();
-        beamRenderer.material = CreateBeamMaterial();
-        beamRenderer.startWidth = beamWidth;
-        beamRenderer.endWidth = beamWidth * 0.5f;
-        beamRenderer.positionCount = 2;
-        beamRenderer.useWorldSpace = true;
+        // Create 3D cylindrical beam
+        Create3DBeam();
         
         // Setup light component
         beaconLight = gameObject.AddComponent<Light>();
@@ -50,6 +45,46 @@ public class PortalBeacon : MonoBehaviour
         SetupParticles();
     }
     
+    void Create3DBeam()
+    {
+        // Create cylinder for 3D beam
+        beamCylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+    beamCylinder.name = "PortalBeam";
+    beamCylinder.transform.SetParent(transform);
+    
+    // Smaller beam radius
+    float smallerRadius = beamRadius * 0.6f; // 40% smaller
+    beamCylinder.transform.localPosition = new Vector3(0, beamHeight / 2f, 0);
+    beamCylinder.transform.localScale = new Vector3(smallerRadius * 2f, beamHeight / 2f, smallerRadius * 2f);
+    
+    Destroy(beamCylinder.GetComponent<Collider>());
+    
+    // Force cyan color
+    Renderer beamRenderer = beamCylinder.GetComponent<Renderer>();
+    Material beamMat = new Material(Shader.Find("Standard"));
+    beamMat.color = Color.cyan;
+    beamMat.EnableKeyword("_EMISSION");
+    beamMat.SetColor("_EmissionColor", Color.cyan * 2f);
+        beamMat.SetFloat("_Metallic", 0f);
+        beamMat.SetFloat("_Smoothness", 1f);
+        
+        // Make it transparent
+        beamMat.SetFloat("_Mode", 3f); // Transparent mode
+        beamMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        beamMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        beamMat.SetInt("_ZWrite", 0);
+        beamMat.DisableKeyword("_ALPHATEST_ON");
+        beamMat.EnableKeyword("_ALPHABLEND_ON");
+        beamMat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        beamMat.renderQueue = 3000;
+        
+        Color finalColor = beamColor;
+        finalColor.a = 0.4f; // Semi-transparent
+        beamMat.color = finalColor;
+        
+        beamRenderer.material = beamMat;
+    }
+    
     void SetupParticles()
     {
         particles = gameObject.AddComponent<ParticleSystem>();
@@ -64,23 +99,12 @@ public class PortalBeacon : MonoBehaviour
         
         var shape = particles.shape;
         shape.shapeType = ParticleSystemShapeType.Circle;
-        shape.radius = 1f;
+        shape.radius = beamRadius;
         
         var velocityOverLifetime = particles.velocityOverLifetime;
         velocityOverLifetime.enabled = true;
         velocityOverLifetime.space = ParticleSystemSimulationSpace.Local;
-        velocityOverLifetime.y = 10f; // Upward movement
-    }
-    
-    Material CreateBeamMaterial()
-    {
-        Material mat = new Material(Shader.Find("Sprites/Default"));
-        mat.color = beamColor;
-        mat.SetInt("_ZWrite", 0);
-        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-        mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
-        return mat;
+        velocityOverLifetime.y = 10f;
     }
     
     void Update()
@@ -94,18 +118,17 @@ public class PortalBeacon : MonoBehaviour
     
     void UpdateBeamEffect()
     {
-        // Set beam positions
-        Vector3 startPos = transform.position;
-        Vector3 endPos = startPos + Vector3.up * beamHeight;
-        
-        beamRenderer.SetPosition(0, startPos);
-        beamRenderer.SetPosition(1, endPos);
-        
-        // Pulse effect
-        float pulse = (Mathf.Sin(Time.time * pulseSpeed) + 1f) * 0.5f;
-        Color currentColor = beamColor;
-        currentColor.a = 0.3f + (pulse * 0.4f);
-        beamRenderer.material.color = currentColor;
+        if (beamCylinder != null)
+        {
+            // Pulse the beam intensity
+            float pulse = (Mathf.Sin(Time.time * pulseSpeed) + 1f) * 0.5f;
+            Renderer beamRenderer = beamCylinder.GetComponent<Renderer>();
+            
+            Color pulseColor = beamColor;
+            pulseColor.a = 0.2f + (pulse * 0.3f);
+            beamRenderer.material.color = pulseColor;
+            beamRenderer.material.SetColor("_EmissionColor", beamColor * (1f + pulse));
+        }
     }
     
     void UpdateLightPulse()
@@ -121,13 +144,11 @@ public class PortalBeacon : MonoBehaviour
         isActive = true;
         SetBeaconState(true);
         
-        // Play activation sound
         if (audioSource != null && activationSound != null)
         {
             audioSource.PlayOneShot(activationSound);
         }
         
-        // Start ambient hum
         if (ambientHum != null)
         {
             audioSource.clip = ambientHum;
@@ -150,8 +171,8 @@ public class PortalBeacon : MonoBehaviour
     
     void SetBeaconState(bool active)
     {
-        if (beamRenderer != null)
-            beamRenderer.enabled = active;
+        if (beamCylinder != null)
+            beamCylinder.SetActive(active);
             
         if (beaconLight != null)
             beaconLight.enabled = active;
@@ -165,7 +186,6 @@ public class PortalBeacon : MonoBehaviour
         }
     }
     
-    // Call this from GameManager when all fragments collected
     public void OnAllFragmentsCollected()
     {
         ActivateBeacon();
