@@ -10,7 +10,7 @@ public class ExitTrigger : MonoBehaviour
     [Header("Extraction Settings")]
     public float extractionEffectTime = 2f;
     public float fadeOutTime = 1f;
-    public float centerRadius = 1f; // How close to center player needs to be
+    public float centerRadius = 1f;
     
     [Header("Audio")]
     public AudioClip activationSound;
@@ -61,7 +61,6 @@ public class ExitTrigger : MonoBehaviour
     
     void Update()
     {
-        // Check if player is in portal and close to center
         if (playerInPortal != null && !hasTriggered && isActivated)
         {
             float distanceFromCenter = Vector3.Distance(
@@ -95,7 +94,6 @@ public class ExitTrigger : MonoBehaviour
                 return;
             }
             
-            // Don't trigger immediately - let player walk to center
             playerInPortal = other.transform;
             Debug.Log("Player entered portal area - walk to center to activate extraction...");
             
@@ -134,11 +132,22 @@ public class ExitTrigger : MonoBehaviour
             playerController.enabled = false;
         }
         
+        // LOCK THE CAMERA
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            mainCamera.transform.SetParent(null);
+            Vector3 lockedPosition = mainCamera.transform.position;
+            Quaternion lockedRotation = mainCamera.transform.rotation;
+            
+            StartCoroutine(LockCameraRealTime(mainCamera, lockedPosition, lockedRotation));
+        }
+        
         // Show cursor since game is paused
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         
-        // Play teleport sound (use PlayOneShot which works during Time.timeScale = 0)
+        // Play teleport sound
         if (audioSource != null && teleportSound != null)
         {
             audioSource.PlayOneShot(teleportSound);
@@ -150,8 +159,18 @@ public class ExitTrigger : MonoBehaviour
             gameManager.UpdateStatusMessage("EXTRACTION COMPLETE! Well done!");
         }
         
-        // Start effects and completion (using real time)
+        // Start effects and completion
         StartCoroutine(ExtractionEffectsAndComplete(player));
+    }
+    
+    System.Collections.IEnumerator LockCameraRealTime(Camera camera, Vector3 position, Quaternion rotation)
+    {
+        while (camera != null)
+        {
+            camera.transform.position = position;
+            camera.transform.rotation = rotation;
+            yield return new WaitForSecondsRealtime(0.02f);
+        }
     }
     
     System.Collections.IEnumerator ExtractionEffectsAndComplete(Transform player)
@@ -159,7 +178,7 @@ public class ExitTrigger : MonoBehaviour
         // Create extraction effect
         GameObject extractionEffect = CreateExtractionEffect(player);
         
-        // Wait using real time (unaffected by Time.timeScale)
+        // Wait using real time
         yield return new WaitForSecondsRealtime(extractionEffectTime);
         
         // Start fade out
@@ -189,7 +208,7 @@ public class ExitTrigger : MonoBehaviour
         // Create upward particle beam with cyan color
         ParticleSystem particles = effect.AddComponent<ParticleSystem>();
         var main = particles.main;
-        main.startColor = Color.cyan; // Force cyan color
+        main.startColor = Color.cyan;
         main.startSpeed = 10f;
         main.startSize = 0.2f;
         main.maxParticles = 150;
@@ -200,7 +219,7 @@ public class ExitTrigger : MonoBehaviour
         
         var shape = particles.shape;
         shape.shapeType = ParticleSystemShapeType.Circle;
-        shape.radius = 0.8f; // Smaller radius
+        shape.radius = 0.8f;
         
         var velocityOverLifetime = particles.velocityOverLifetime;
         velocityOverLifetime.enabled = true;
@@ -252,7 +271,7 @@ public class ExitTrigger : MonoBehaviour
         }
         
         UnityEngine.UI.Image fadeImage = fadePanel.AddComponent<UnityEngine.UI.Image>();
-        fadeImage.color = new Color(0, 0, 0, 0); // Start transparent
+        fadeImage.color = new Color(0, 0, 0, 0);
         
         // Set to full screen
         RectTransform rect = fadePanel.GetComponent<RectTransform>();
@@ -265,13 +284,13 @@ public class ExitTrigger : MonoBehaviour
         float timer = 0f;
         while (timer < fadeOutTime)
         {
-            timer += Time.unscaledDeltaTime; // Use unscaled time
+            timer += Time.unscaledDeltaTime;
             float alpha = timer / fadeOutTime;
             fadeImage.color = new Color(0, 0, 0, alpha);
             yield return null;
         }
         
-        fadeImage.color = Color.black; // Ensure fully black
+        fadeImage.color = Color.black;
     }
     
     void CompleteLevel()
@@ -334,7 +353,7 @@ public class ExitTrigger : MonoBehaviour
             if (active)
             {
                 Material glowMat = new Material(Shader.Find("Standard"));
-                glowMat.color = Color.cyan; // Changed to cyan
+                glowMat.color = Color.cyan;
                 glowMat.EnableKeyword("_EMISSION");
                 glowMat.SetColor("_EmissionColor", Color.cyan * 0.8f);
                 platformRenderer.material = glowMat;

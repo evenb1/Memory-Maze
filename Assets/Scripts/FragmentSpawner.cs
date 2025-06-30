@@ -1,86 +1,142 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 public class FragmentSpawner : MonoBehaviour
 {
+    [Header("Fragment Settings")]
     public GameObject fragmentPrefab;
-    public int numberOfFragments = 5;
+    public int numberOfFragments = 6; // Level 2 has 6 fragments
     public float spawnHeight = 1f;
-    public LayerMask wallLayer = 1; // Default layer for walls
     
-    // Better spawn points that avoid walls in our maze
-   private Vector3[] possibleSpawnPoints = {
-    new Vector3(-7, 1, 7),    // Top left corner
-    new Vector3(7, 1, 7),     // Top right corner
-    new Vector3(-7, 1, -7),   // Bottom left corner
-    new Vector3(7, 1, -7),    // Bottom right corner
-    new Vector3(-5, 1, 3),    // Left side paths
-    new Vector3(-3, 1, 5),    // Top side paths
-    new Vector3(3, 1, 5),     
-    new Vector3(5, 1, 3),     // Right side paths
-    new Vector3(5, 1, -3),    
-    new Vector3(3, 1, -5),    // Bottom side paths
-    new Vector3(-3, 1, -5),   
-    new Vector3(-5, 1, -3),   
-    new Vector3(-1, 1, 3),    // Near center but not (0,0,0)
-    new Vector3(1, 1, -3),    
-    new Vector3(-3, 1, -1),   
-    new Vector3(3, 1, 1)      
-};
+    [Header("Spawn Method")]
+    public bool useSmartSpawning = true; // Use maze-aware spawning
+    
+    private ProperMazeGenerator mazeGenerator;
     
     void Start()
     {
-        SpawnRandomFragments();
+        mazeGenerator = FindFirstObjectByType<ProperMazeGenerator>();
+        
+        if (useSmartSpawning && mazeGenerator != null)
+        {
+            SpawnFragmentsInValidPositions();
+        }
+        else
+        {
+            SpawnFragmentsLegacyMethod();
+        }
     }
     
-    void SpawnRandomFragments()
+    void SpawnFragmentsInValidPositions()
     {
-        List<Vector3> validSpawnPoints = new List<Vector3>();
+        Debug.Log("Using smart spawning - getting valid positions from maze generator");
         
-        // Check each spawn point to make sure it's not inside a wall
-        foreach(Vector3 point in possibleSpawnPoints)
+        // Get valid spawn positions from the maze generator
+        Vector3[] validPositions = mazeGenerator.GetValidSpawnPositions(numberOfFragments);
+        
+        if (validPositions.Length < numberOfFragments)
         {
-            if(IsSpawnPointValid(point))
-            {
-                validSpawnPoints.Add(point);
-            }
+            Debug.LogWarning($"Only found {validPositions.Length} valid positions, but need {numberOfFragments}. Using what we have.");
         }
         
-        Debug.Log("Found " + validSpawnPoints.Count + " valid spawn points");
-        
-        // Spawn fragments at valid points
-        int fragmentsSpawned = 0;
-        while(fragmentsSpawned < numberOfFragments && validSpawnPoints.Count > 0)
+        // Spawn fragments at valid positions
+        for (int i = 0; i < validPositions.Length; i++)
         {
-            int randomIndex = Random.Range(0, validSpawnPoints.Count);
-            Vector3 spawnPosition = validSpawnPoints[randomIndex];
+            Vector3 spawnPosition = validPositions[i];
+            spawnPosition.y = spawnHeight; // Set correct height
             
-            if(fragmentPrefab != null)
+            if (fragmentPrefab != null)
             {
                 GameObject fragment = Instantiate(fragmentPrefab, spawnPosition, Quaternion.identity);
-                fragment.name = "MemoryFragment_" + fragmentsSpawned;
-                fragmentsSpawned++;
+                fragment.name = $"MemoryFragment_{i + 1}";
+                fragment.transform.SetParent(transform);
+                
+                Debug.Log($"Fragment {i + 1} spawned at: {spawnPosition}");
             }
-            
-            validSpawnPoints.RemoveAt(randomIndex);
         }
         
-        Debug.Log("Successfully spawned " + fragmentsSpawned + " memory fragments!");
+        Debug.Log($"Successfully spawned {validPositions.Length} fragments using smart spawning!");
     }
     
-    bool IsSpawnPointValid(Vector3 point)
+    void SpawnFragmentsLegacyMethod()
     {
-        // Check if there's a wall at this position
-        Collider[] colliders = Physics.OverlapSphere(point, 0.5f);
+        Debug.Log("Using legacy spawning method");
         
-        foreach(Collider col in colliders)
+        // Fallback to manual positions if maze generator not available
+        Vector3[] manualSpawnPoints = {
+            new Vector3(-6, spawnHeight, 6),    // Top left
+            new Vector3(6, spawnHeight, 6),     // Top right
+            new Vector3(-6, spawnHeight, -6),   // Bottom left
+            new Vector3(6, spawnHeight, -6),    // Bottom right
+            new Vector3(-8, spawnHeight, 0),    // Left side
+            new Vector3(8, spawnHeight, 0),     // Right side
+            new Vector3(0, spawnHeight, 8),     // Top center
+            new Vector3(0, spawnHeight, -8)     // Bottom center
+        };
+        
+        int fragmentsSpawned = 0;
+        for (int i = 0; i < manualSpawnPoints.Length && fragmentsSpawned < numberOfFragments; i++)
         {
-            if(col.gameObject.name.Contains("Wall"))
+            Vector3 spawnPosition = manualSpawnPoints[i];
+            
+            // Check if position is valid (not in a wall)
+            if (!IsPositionBlocked(spawnPosition))
             {
-                return false; // There's a wall here
+                if (fragmentPrefab != null)
+                {
+                    GameObject fragment = Instantiate(fragmentPrefab, spawnPosition, Quaternion.identity);
+                    fragment.name = $"MemoryFragment_{fragmentsSpawned + 1}";
+                    fragment.transform.SetParent(transform);
+                    fragmentsSpawned++;
+                    
+                    Debug.Log($"Fragment {fragmentsSpawned} spawned at: {spawnPosition}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Spawn position {spawnPosition} is blocked, skipping...");
             }
         }
         
-        return true; // Safe to spawn here
+        Debug.Log($"Legacy spawning complete - {fragmentsSpawned} fragments spawned");
+    }
+    
+    bool IsPositionBlocked(Vector3 position)
+    {
+        // Check if there's a wall at this position
+        Collider[] colliders = Physics.OverlapSphere(position, 0.5f);
+        
+        foreach (Collider col in colliders)
+        {
+            if (col.gameObject.name.Contains("Wall") || col.gameObject.tag == "Wall")
+            {
+                return true; // Position is blocked by a wall
+            }
+        }
+        
+        // If maze generator is available, also check with it
+        if (mazeGenerator != null)
+        {
+            return mazeGenerator.IsWallAt(position);
+        }
+        
+        return false; // Position is clear
+    }
+    
+    // Debug method to show spawn points in scene view
+    void OnDrawGizmos()
+    {
+        if (mazeGenerator != null && useSmartSpawning)
+        {
+            // Show valid spawn positions as green spheres
+            Vector3[] validPositions = mazeGenerator.GetValidSpawnPositions(numberOfFragments);
+            
+            Gizmos.color = Color.green;
+            foreach (Vector3 pos in validPositions)
+            {
+                Vector3 gizmoPos = pos;
+                gizmoPos.y = spawnHeight;
+                Gizmos.DrawWireSphere(gizmoPos, 0.5f);
+            }
+        }
     }
 }

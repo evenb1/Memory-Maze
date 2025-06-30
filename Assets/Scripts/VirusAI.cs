@@ -226,6 +226,18 @@ public class VirusAI : MonoBehaviour
             playerController.enabled = false;
         }
         
+        // LOCK THE CAMERA POSITION
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            // Lock camera to current position/rotation
+            mainCamera.transform.SetParent(null); // Unparent from any object
+            Vector3 lockedPosition = mainCamera.transform.position;
+            Quaternion lockedRotation = mainCamera.transform.rotation;
+            
+            StartCoroutine(LockCamera(mainCamera, lockedPosition, lockedRotation));
+        }
+        
         // Stop virus movement
         this.enabled = false;
         
@@ -265,6 +277,16 @@ public class VirusAI : MonoBehaviour
         if(gameManager != null)
         {
             gameManager.GameOver();
+        }
+    }
+    
+    System.Collections.IEnumerator LockCamera(Camera camera, Vector3 position, Quaternion rotation)
+    {
+        while (camera != null)
+        {
+            camera.transform.position = position;
+            camera.transform.rotation = rotation;
+            yield return null;
         }
     }
     
