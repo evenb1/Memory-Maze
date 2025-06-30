@@ -374,10 +374,11 @@ MonoBehaviour:
   statusText: {fileID: 0}
   exitPlatform: {fileID: 919132149155446097, guid: b5a767db0ae6c4c298c70e97fbbc8cba, type: 3}
   audioSource: {fileID: 0}
-  fragmentCollectedSound: {fileID: 0}
+  fragmentCollectedSound: {fileID: 8300000, guid: e6439d499f26243a8bca9d3ba78c69f5, type: 3}
   allFragmentsSound: {fileID: 0}
   winSound: {fileID: 0}
   gameOverSound: {fileID: 0}
+  earthquakeController: {fileID: 0}
 --- !u!4 &346817150
 Transform:
   m_ObjectHideFlags: 0
@@ -644,6 +645,15 @@ MonoBehaviour:
   moveSpeed: 2
   rotationSpeed: 5
   mouseSensitivity: 2
+  baseMovementSpeed: 3
+  hasSpeedBoost: 0
+  currentSpeedMultiplier: 1
+  speedBoostTimeRemaining: 0
+  speedBoostIndicator: {fileID: 0}
+  boostActiveColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  boostInactiveColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  showSpeedBoostGlow: 1
+  speedBoostGlowColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1 &534674445
 GameObject:
   m_ObjectHideFlags: 0
@@ -678,7 +688,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -282, y: 173}
+  m_AnchoredPosition: {x: -260, y: 225}
   m_SizeDelta: {x: 300, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &534674447
@@ -889,8 +899,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   floorTilePrefab: {fileID: 919132149155446097, guid: 52e9263757d834a238901a7a57f643a3, type: 3}
-  tilesWide: 5
-  tilesDeep: 5
+  tilesWide: 10
+  tilesDeep: 10
   tileSize: 4
 --- !u!4 &598367015
 Transform:
@@ -1281,8 +1291,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6960bb78f98c349739af88542930edc8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  mazeGridWidth: 10
+  mazeGridHeight: 10
+  cellSize: 4
+  wallHeight: 2
+  wallThickness: 0.8
   exitPortalPrefab: {fileID: 919132149155446097, guid: b5a767db0ae6c4c298c70e97fbbc8cba, type: 3}
   wallMaterial: {fileID: 2100000, guid: 1e36be9704ebc4c298a15e35697d85fd, type: 2}
+  useLevel3Theme: 1
+  level3WallColor: {r: 0.9, g: 0.8, b: 0.2, a: 1}
+  generateNavMesh: 1
+  navMeshArea: 0
 --- !u!4 &1695090722
 Transform:
   m_ObjectHideFlags: 0
@@ -1325,6 +1344,9 @@ MonoBehaviour:
   bobAmount: 0.3
   enableLightBeam: 1
   beamRange: 15
+  virusAvoidanceRadius: 4
+  rotationSpeed: 3
+  catchDistance: 0.8
   gameOverEffectTime: 2
 --- !u!1 &1885907492
 GameObject:
@@ -1358,9 +1380,8 @@ MonoBehaviour:
   fragmentPrefab: {fileID: 5945049250595365582, guid: cc75e653ce8d7422daa9aff9e6f76a5f, type: 3}
   numberOfFragments: 5
   spawnHeight: 1
-  wallLayer:
-    serializedVersion: 2
-    m_Bits: 1
+  useSmartSpawning: 1
+  autoDetectLevel: 1
 --- !u!4 &1885907494
 Transform:
   m_ObjectHideFlags: 0

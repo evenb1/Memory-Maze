@@ -72,12 +72,17 @@
     <Compile Include="Assets/Jammo-Character/Scripts/MovementInput.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexJitter.cs" />
     <Compile Include="Assets/Scripts/SkyboxController.cs" />
+    <Compile Include="Assets/Scripts/FragmentMagnet.cs" />
+    <Compile Include="Assets/Scripts/PowerUpCleanup.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_UiFrameRateCounter.cs" />
     <Compile Include="Assets/Scripts/MemoryFragment.cs" />
+    <Compile Include="Assets/Scripts/EMPPulse.cs" />
     <Compile Include="Assets/Scripts/TerminalUI.cs" />
     <Compile Include="Assets/Scripts/VirusAI.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexZoom.cs" />
+    <Compile Include="Assets/Scripts/PlayerFragmentMagnet1.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextSelector_B.cs" />
+    <Compile Include="Assets/Scripts/Level4DramaticController.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/SkewTextExample.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/WarpTextExample.cs" />
     <Compile Include="Assets/Scripts/HolographicFloor.cs" />
@@ -85,7 +90,7 @@
     <Compile Include="Assets/Scripts/AnimatedBackground.cs" />
     <Compile Include="Assets/Scripts/BackgroundMusic.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextInfoDebugTool.cs" />
-    <Compile Include="Assets/Scripts/SpeedBoost.cs" />
+    <Compile Include="Assets/Scripts/ShieldBoost.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexShakeA.cs" />
     <Compile Include="Assets/Scripts/LevelConfigs.cs" />
     <Compile Include="Assets/Scripts/DataFlicker.cs" />
@@ -110,6 +115,7 @@
     <Compile Include="Assets/Scripts/LevelSkyboxManager.cs" />
     <Compile Include="Assets/Scripts/ApplyCircuitMaterial.cs" />
     <Compile Include="Assets/BTM_Assets/BTM_Items_Gems/Scripts/SimpleGemsAnim.cs" />
+    <Compile Include="Assets/Scripts/PlayerShield.cs" />
     <Compile Include="Assets/Scripts/FragmentSpawner.cs" />
     <Compile Include="Assets/Scripts/ButtonSound.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/DropdownSample.cs" />
@@ -119,6 +125,7 @@
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_PhoneNumberValidator.cs" />
     <Compile Include="Assets/Scripts/BlinkingCursor.cs" />
     <Compile Include="Assets/Scripts/GroundPatrolVirus.cs" />
+    <Compile Include="Assets/Scripts/PowerUpManager.cs" />
     <Compile Include="Assets/Scripts/StoryTransitionScreen.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TextConsoleSimulator.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TeleType.cs" />
@@ -143,6 +150,7 @@
     <None Include="Assets/TextMesh Pro/Shaders/TMPro_Mobile.cginc" />
     <None Include="Assets/TextMesh Pro/Shaders/TMP_SDF SSD.shader" />
     <None Include="Assets/TextMesh Pro/Shaders/TMP_SDF-Surface-Mobile.shader" />
+    <None Include="Assets/Sci_fi_Drones/Read me.txt" />
     <None Include="Assets/TextMesh Pro/Shaders/SDFFunctions.hlsl" />
     <None Include="Assets/TextMesh Pro/Shaders/TMP_SDF-Surface.shader" />
     <None Include="Assets/TextMesh Pro/Sprites/EmojiOne Attribution.txt" />

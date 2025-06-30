@@ -1,0 +1,100 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &2935727928015161589
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 100004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_Name
+      value: Robot_Scout_HyperX_Unity
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -20
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.33552
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -20
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 400004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2300000, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 2ca1fbd6411db4b21a4e68e3f9745946, type: 2}
+    - target: {fileID: 2300002, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 6737d65cc89e043319c6ef1314c60caa, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 100004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1312305009501302927}
+  m_SourcePrefab: {fileID: 100100000, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+--- !u!1 &2935727928015064657 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 100004, guid: 7ef5a93e089a2b841891487c5d6e5d28, type: 3}
+  m_PrefabInstance: {fileID: 2935727928015161589}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1312305009501302927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2935727928015064657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e04fcf47f27a94f30af065d312ec9a6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveSpeed: 3
+  detectionRange: 15
+  huntSpeed: 4
+  patrolSpeed: 2
+  droneModel: {fileID: 0}
+  hoverHeight: 1
+  bobSpeed: 2
+  bobAmount: 0.3
+  enableLightBeam: 1
+  beamRange: 10
+  virusAvoidanceRadius: 4
+  rotationSpeed: 3
+  gameOverEffectTime: 2
