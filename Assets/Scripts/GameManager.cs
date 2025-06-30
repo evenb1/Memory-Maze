@@ -6,13 +6,13 @@ using TMPro;
 public class GameManager : MonoBehaviour
 {
     [Header("Game Settings")]
-    public int totalFragments = 7; // Level 3 has 7 fragments
+    public int totalFragments = 8;
     public int collectedFragments = 0;
     
     [Header("UI Elements")]
     public TextMeshProUGUI fragmentCounterText;
     public TextMeshProUGUI winText;
-    public TextMeshProUGUI statusText;  
+    public TextMeshProUGUI statusText;
     
     [Header("Exit Platform")]
     public GameObject exitPlatform;
@@ -24,8 +24,8 @@ public class GameManager : MonoBehaviour
     public AudioClip winSound;
     public AudioClip gameOverSound;
     
-    [Header("Level 3 Virus Integration")]
-    public Level3VirusSpawner virusSpawner; // Assign in inspector or auto-find
+    [Header("Level 4 Earthquake System")]
+    public Level4DramaticController earthquakeController;
     
     private bool allFragmentsCollected = false;
     private bool gameEnded = false;
@@ -57,10 +57,10 @@ public class GameManager : MonoBehaviour
             }
         }
         
-        // Auto-find virus spawner if not assigned
-        if (virusSpawner == null)
+        // Find earthquake controller if not assigned
+        if (earthquakeController == null)
         {
-            virusSpawner = FindFirstObjectByType<Level3VirusSpawner>();
+            earthquakeController = FindFirstObjectByType<Level4DramaticController>();
         }
         
         collectedFragments = 0;
@@ -70,9 +70,9 @@ public class GameManager : MonoBehaviour
         portalBeacon = FindFirstObjectByType<PortalBeacon>();
         
         UpdateUI();
-        UpdateStatusMessage("Collect all memory fragments to activate the exit portal!");
+        UpdateStatusMessage("Collect all 8 memory fragments to activate the exit portal!");
         
-        if(exitPlatform != null)
+        if (exitPlatform != null)
         {
             SetExitPlatformState(false);
         }
@@ -81,8 +81,7 @@ public class GameManager : MonoBehaviour
         Cursor.visible = false;
         
         Debug.Log($"GameManager initialized - Need to collect {totalFragments} fragments");
-        Debug.Log($"Fragment Counter Text assigned: {(fragmentCounterText != null)}");
-        Debug.Log($"Level 3 Virus Spawner found: {(virusSpawner != null)}");
+        Debug.Log($"Earthquake Controller found: {(earthquakeController != null)}");
     }
     
     public void CollectFragment()
@@ -90,48 +89,50 @@ public class GameManager : MonoBehaviour
         if (gameEnded) return;
         
         collectedFragments++;
-        Debug.Log($"=== FRAGMENT COLLECTED ===");
-        Debug.Log($"Progress: {collectedFragments}/{totalFragments}");
-        Debug.Log($"fragmentCounterText is: {(fragmentCounterText != null ? "ASSIGNED" : "NULL")}");
+        Debug.Log($"=== FRAGMENT {collectedFragments} COLLECTED ===");
         
         if (audioSource != null && fragmentCollectedSound != null)
         {
             audioSource.PlayOneShot(fragmentCollectedSound);
         }
         
+        // TRIGGER LEVEL 4 EARTHQUAKES!
+        if (earthquakeController != null)
+        {
+            earthquakeController.OnFragmentCollected(collectedFragments);
+            Debug.Log($"🌋 EARTHQUAKE TRIGGERED FOR FRAGMENT {collectedFragments}!");
+        }
+        else
+        {
+            Debug.LogWarning("❌ No earthquake controller found!");
+        }
+        
         UpdateUI();
         
-        if(collectedFragments >= totalFragments)
+        if (collectedFragments >= totalFragments)
         {
             AllFragmentsCollected();
         }
         else
         {
             int remaining = totalFragments - collectedFragments;
-            UpdateStatusMessage($"Fragment acquired! {remaining} fragments remaining...");
+            UpdateStatusMessage($"Fragment {collectedFragments}/{totalFragments} collected! {remaining} remaining...");
             
-            // Notify Level 3 virus spawner about fragment collection
-            if (virusSpawner != null)
-            {
-                virusSpawner.OnFragmentCollected();
-            }
-            
-            // Also increase individual virus speeds (legacy support)
-            VirusAI virus = FindFirstObjectByType<VirusAI>();
-            if (virus != null)
+            // Speed up existing viruses
+            VirusAI[] viruses = FindObjectsOfType<VirusAI>();
+            foreach (VirusAI virus in viruses)
             {
                 virus.IncreaseSpeed(0.3f);
             }
         }
         
-        // Notify skybox manager
+        // Notify other systems
         LevelSkyboxManager skyboxManager = FindFirstObjectByType<LevelSkyboxManager>();
         if (skyboxManager != null)
         {
             skyboxManager.OnFragmentCollected();
         }
         
-        // Notify power-up spawner
         PowerUpSpawner powerUpSpawner = FindFirstObjectByType<PowerUpSpawner>();
         if (powerUpSpawner != null)
         {
@@ -141,13 +142,10 @@ public class GameManager : MonoBehaviour
     
     void UpdateUI()
     {
-        Debug.Log("=== UPDATE UI CALLED ===");
-        if(fragmentCounterText != null)
+        if (fragmentCounterText != null)
         {
             string newText = $"Memory Fragments: {collectedFragments}/{totalFragments}";
             fragmentCounterText.text = newText;
-            Debug.Log($"UI text should now be: {newText}");
-            Debug.Log($"Actual UI text is: {fragmentCounterText.text}");
             
             if (collectedFragments == totalFragments)
             {
@@ -162,70 +160,38 @@ public class GameManager : MonoBehaviour
                 fragmentCounterText.color = Color.white;
             }
         }
-        else
-        {
-            Debug.LogError("fragmentCounterText is NULL! UI not assigned in GameManager!");
-        }
     }
     
     void AllFragmentsCollected()
     {
         allFragmentsCollected = true;
-        Debug.Log("All fragments collected! Exit portal activated!");
+        Debug.Log("All 8 fragments collected! Exit portal activated!");
         
         if (audioSource != null && allFragmentsSound != null)
         {
             audioSource.PlayOneShot(allFragmentsSound);
         }
         
-        // Notify Level 3 virus spawner about all fragments collected
-        if (virusSpawner != null)
-        {
-            virusSpawner.OnAllFragmentsCollected();
-        }
-        
-        // ACTIVATE THE PORTAL BEACON
+        // Activate the portal
         if (portalBeacon != null)
         {
             portalBeacon.OnAllFragmentsCollected();
-            Debug.Log("Beacon activated!");
         }
         
-        // ALSO ACTIVATE THE EXIT TRIGGER
         ExitTrigger exitTrigger = FindFirstObjectByType<ExitTrigger>();
         if (exitTrigger != null)
         {
             exitTrigger.OnAllFragmentsCollected();
-            Debug.Log("Exit trigger activated!");
-        }
-        else
-        {
-            Debug.LogError("ExitTrigger not found!");
         }
         
-        // Activate exit platform
-        if(exitPlatform != null)
+        if (exitPlatform != null)
         {
             SetExitPlatformState(true);
         }
         
-        // Notify skybox manager
-        LevelSkyboxManager skyboxManager = FindFirstObjectByType<LevelSkyboxManager>();
-        if (skyboxManager != null)
-        {
-            skyboxManager.OnAllFragmentsCollected();
-        }
-        
-        // Notify power-up spawner
-        PowerUpSpawner powerUpSpawner = FindFirstObjectByType<PowerUpSpawner>();
-        if (powerUpSpawner != null)
-        {
-            powerUpSpawner.OnLevelComplete();
-        }
-        
         UpdateStatusMessage("ALL FRAGMENTS COLLECTED! Proceed to the glowing EXIT PORTAL!");
         
-        if(fragmentCounterText != null)
+        if (fragmentCounterText != null)
         {
             fragmentCounterText.text = "All fragments collected! Find the glowing portal!";
             fragmentCounterText.color = Color.green;
@@ -262,8 +228,6 @@ public class GameManager : MonoBehaviour
                 mat.EnableKeyword("_EMISSION");
                 mat.SetColor("_EmissionColor", Color.green * 0.5f);
             }
-            
-            Debug.Log("Exit portal activated and glowing!");
         }
     }
     
@@ -271,20 +235,19 @@ public class GameManager : MonoBehaviour
     {
         if (gameEnded) return;
         
-        if(allFragmentsCollected)
+        if (allFragmentsCollected)
         {
             WinGame();
         }
         else
         {
-            Debug.Log("Cannot exit yet - collect all memory fragments first!");
             UpdateStatusMessage("Collect all memory fragments before escaping!");
         }
     }
     
     public void UpdateStatusMessage(string message)
     {
-        if(statusText != null)
+        if (statusText != null)
         {
             statusText.text = message;
         }
@@ -296,20 +259,19 @@ public class GameManager : MonoBehaviour
         if (gameEnded) return;
         
         gameEnded = true;
-        Debug.Log("YOU WIN! Player has escaped!");
         
         if (audioSource != null && winSound != null)
         {
             audioSource.PlayOneShot(winSound);
         }
         
-        if(winText != null)
+        if (winText != null)
         {
             winText.text = "SUCCESS! You have escaped!";
             winText.gameObject.SetActive(true);
         }
         
-        UpdateStatusMessage("ESCAPE SUCCESSFUL! Game complete!");
+        UpdateStatusMessage("ESCAPE SUCCESSFUL! Level 4 complete!");
         
         Time.timeScale = 0;
         Cursor.lockState = CursorLockMode.None;
@@ -329,33 +291,13 @@ public class GameManager : MonoBehaviour
         if (gameEnded) return;
         
         gameEnded = true;
-        Debug.Log("GAME OVER! Player was caught!");
         
         if (audioSource != null && gameOverSound != null)
         {
             audioSource.PlayOneShot(gameOverSound);
         }
         
-        // Notify Level 3 virus spawner about game over
-        if (virusSpawner != null)
-        {
-            virusSpawner.OnGameOver();
-        }
-        
-        // Notify other systems
-        LevelSkyboxManager skyboxManager = FindFirstObjectByType<LevelSkyboxManager>();
-        if (skyboxManager != null)
-        {
-            skyboxManager.OnGameOver();
-        }
-        
-        PowerUpSpawner powerUpSpawner = FindFirstObjectByType<PowerUpSpawner>();
-        if (powerUpSpawner != null)
-        {
-            powerUpSpawner.OnPlayerCaught();
-        }
-        
-        if(winText != null)
+        if (winText != null)
         {
             winText.text = "GAME OVER! You were caught!";
             winText.color = Color.red;
@@ -383,12 +325,6 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
     
-    public void ReturnToMainMenu()
-    {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene("MainMenu");
-    }
-    
     public bool AreAllFragmentsCollected()
     {
         return allFragmentsCollected;
@@ -402,21 +338,5 @@ public class GameManager : MonoBehaviour
     public int GetTotalFragments()
     {
         return totalFragments;
-    }
-    
-    // Additional methods for Level 3 debugging
-    public void DebugVirusInfo()
-    {
-        if (virusSpawner != null)
-        {
-            int virusCount = virusSpawner.GetActiveVirusCount();
-            Vector3[] virusPositions = virusSpawner.GetVirusPositions();
-            
-            Debug.Log($"Active viruses: {virusCount}");
-            for (int i = 0; i < virusPositions.Length; i++)
-            {
-                Debug.Log($"Virus {i + 1} position: {virusPositions[i]}");
-            }
-        }
     }
 }

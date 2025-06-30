@@ -13,8 +13,8 @@ public class StoryTransitionScreen : MonoBehaviour
     public Image backgroundImage;
     
     [Header("Terminal Effects")]
-    public float typewriterSpeed = 0.03f;
-    public float minimumDisplayTime = 3f;
+    public float typewriterSpeed = 0.05f;
+    public float minimumDisplayTime = 2f;
     
     [Header("Audio")]
     public AudioSource audioSource;
@@ -26,6 +26,7 @@ public class StoryTransitionScreen : MonoBehaviour
     private bool canContinue = false;
     private string targetScene;
     private string storyType;
+    private bool skipRequested = false;
     
     void Start()
     {
@@ -49,6 +50,8 @@ public class StoryTransitionScreen : MonoBehaviour
         // Show cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        
+        Debug.Log($"Story Transition: Level {storyLevel}, Type: {storyType}, Target: {targetScene}");
     }
     
     void SetupAudio()
@@ -57,7 +60,7 @@ public class StoryTransitionScreen : MonoBehaviour
         {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
-        audioSource.volume = 0.5f;
+        audioSource.volume = 0.3f;
     }
     
     void SetupUI()
@@ -96,7 +99,7 @@ public class StoryTransitionScreen : MonoBehaviour
     void ShowLevelCompleteStory()
     {
         string title = $">>> MEMORY SECTOR {GetSectorName(currentLevelData.levelNumber)} COMPLETE <<<";
-        string story = AddTerminalFormatting(currentLevelData.levelCompleteText);
+        string story = GetShortLevelCompleteStory();
         
         DisplayStory(title, story, true);
     }
@@ -104,15 +107,7 @@ public class StoryTransitionScreen : MonoBehaviour
     void ShowGameCompleteStory()
     {
         string title = ">>> ESCAPE SEQUENCE COMPLETE <<<";
-        string story = AddTerminalFormatting(currentLevelData.levelCompleteText + 
-                      "\n\n[SYSTEM MESSAGE]\n" +
-                      "CONGRATULATIONS, BIT-27!\n\n" +
-                      "STATUS: ALL MEMORY SECTORS CLEARED\n" +
-                      "VIRUS THREATS: NEUTRALIZED\n" +
-                      "DATA INTEGRITY: 100%\n" +
-                      "SYSTEM STATUS: FULLY OPERATIONAL\n\n" +
-                      "Your digital odyssey is complete.\n" +
-                      "Welcome to your liberated existence.");
+        string story = GetShortGameCompleteStory();
         
         DisplayStory(title, story, true);
     }
@@ -120,21 +115,71 @@ public class StoryTransitionScreen : MonoBehaviour
     void ShowLevelIntroStory()
     {
         string title = $">>> ACCESSING {currentLevelData.levelName.ToUpper()} <<<";
-        string story = AddTerminalFormatting(currentLevelData.levelIntroText);
+        string story = GetShortLevelIntroStory();
         
         DisplayStory(title, story, false);
     }
     
-    string AddTerminalFormatting(string originalText)
+    string GetShortLevelCompleteStory()
     {
-        return "[SYSTEM BOOT]\n" +
-               "Initializing memory recovery protocol...\n" +
-               "Loading sector data...\n" +
-               "READY\n\n" +
-               "================================\n\n" +
-               originalText +
-               "\n\n================================\n" +
+        return "[SYSTEM MESSAGE]\n" +
+               $"SECTOR {GetSectorName(currentLevelData.levelNumber)} CLEARED\n" +
+               "MEMORY FRAGMENTS RECOVERED\n" +
+               "VIRUS THREATS NEUTRALIZED\n\n" +
+               "PROCEEDING TO NEXT SECTOR...\n" +
                "[END TRANSMISSION]";
+    }
+    
+    string GetShortGameCompleteStory()
+    {
+        return "[FINAL SYSTEM MESSAGE]\n" +
+               "CONGRATULATIONS, BIT-27!\n\n" +
+               "STATUS: ALL SECTORS CLEARED\n" +
+               "MEMORY RESTORATION: 100%\n" +
+               "SYSTEM STATUS: OPERATIONAL\n\n" +
+               "Your digital odyssey is complete.\n" +
+               "Welcome to freedom.\n" +
+               "[END TRANSMISSION]";
+    }
+    
+    string GetShortLevelIntroStory()
+    {
+        switch(currentLevelData.levelNumber)
+        {
+            case 1:
+                return "[INITIALIZATION]\n" +
+                       "Welcome to the Memory Maze, BIT-27.\n" +
+                       "Collect fragments to restore your data.\n" +
+                       "Avoid the security viruses.\n" +
+                       "[BEGIN MISSION]";
+                       
+            case 2:
+                return "[SECTOR BETA ACCESS]\n" +
+                       "Entering deeper memory layers.\n" +
+                       "Enhanced security detected.\n" +
+                       "Proceed with caution.\n" +
+                       "[BEGIN MISSION]";
+                       
+            case 3:
+                return "[SECTOR GAMMA ACCESS]\n" +
+                       "Critical memory systems ahead.\n" +
+                       "Advanced viral countermeasures active.\n" +
+                       "Maximum alertness required.\n" +
+                       "[BEGIN MISSION]";
+                       
+            case 4:
+                return "[SECTOR OMEGA ACCESS]\n" +
+                       "CORE SYSTEM BREACH DETECTED\n" +
+                       "WARNING: ADAPTIVE DEFENSES ONLINE\n" +
+                       "This is your final challenge.\n" +
+                       "[BEGIN FINAL MISSION]";
+                       
+            default:
+                return "[SYSTEM ACCESS]\n" +
+                       "Entering unknown sector.\n" +
+                       "Scan for memory fragments.\n" +
+                       "[BEGIN MISSION]";
+        }
     }
     
     string GetSectorName(int levelNumber)
@@ -177,48 +222,60 @@ public class StoryTransitionScreen : MonoBehaviour
             instructionText.color = currentLevelData.themeColor;
         }
         
-        // Start typewriter
+        // Start typewriter effect
         if (storyText != null)
         {
             storyText.text = "";
             storyText.color = Color.white;
-            StartCoroutine(TerminalTypewriterEffect(story));
+            StartCoroutine(TerminalTypewriterEffect(story, showContinueButton));
         }
-        
-        // Start timer
-        StartCoroutine(MinimumDisplayTimer(showContinueButton));
     }
     
-    System.Collections.IEnumerator TerminalTypewriterEffect(string text)
+    System.Collections.IEnumerator TerminalTypewriterEffect(string text, bool showContinueButton)
     {
         isTyping = true;
+        skipRequested = false;
         
-        foreach (char letter in text)
+        Debug.Log("🖨️ Starting typewriter effect...");
+        
+        for (int i = 0; i < text.Length; i++)
         {
-            if (storyText != null)
+            // Check if skip was requested
+            if (skipRequested)
             {
-                storyText.text += letter;
-                
-                // Play typing sound
-                if (audioSource != null && typewriterSound != null && letter != ' ')
-                {
-                    audioSource.pitch = Random.Range(0.9f, 1.1f);
-                    audioSource.PlayOneShot(typewriterSound, 0.2f);
-                    audioSource.pitch = 1f;
-                }
-                
-                yield return new WaitForSeconds(typewriterSpeed);
+                // Instantly show remaining text
+                storyText.text = text;
+                break;
             }
+            
+            char letter = text[i];
+            storyText.text += letter;
+            
+            // Play typing sound for visible characters
+            if (audioSource != null && typewriterSound != null && letter != ' ' && letter != '\n')
+            {
+                audioSource.pitch = Random.Range(0.9f, 1.1f);
+                audioSource.PlayOneShot(typewriterSound, 0.2f);
+                audioSource.pitch = 1f;
+            }
+            
+            // Wait before next character
+            yield return new WaitForSeconds(typewriterSpeed);
         }
         
         isTyping = false;
+        
+        Debug.Log("🖨️ Typewriter effect complete!");
+        
+        // Start minimum display timer
+        StartCoroutine(MinimumDisplayTimer(showContinueButton));
     }
     
     System.Collections.IEnumerator TitleGlowEffect()
     {
         if (levelTitleText == null) yield break;
         
-        while (true)
+        while (levelTitleText != null && levelTitleText.gameObject.activeInHierarchy)
         {
             float glow = (Mathf.Sin(Time.time * 1.5f) + 1f) * 0.5f;
             Color glowColor = Color.Lerp(currentLevelData.themeColor, 
@@ -237,6 +294,8 @@ public class StoryTransitionScreen : MonoBehaviour
         {
             continueButton.gameObject.SetActive(true);
         }
+        
+        Debug.Log("✅ Can now continue!");
     }
     
     void Update()
@@ -256,45 +315,24 @@ public class StoryTransitionScreen : MonoBehaviour
     
     void SkipTypewriter()
     {
-        StopAllCoroutines();
-        isTyping = false;
-        canContinue = true;
-        
-        if (storyText != null && currentLevelData != null)
-        {
-            if (storyType == "GameComplete")
-            {
-                storyText.text = AddTerminalFormatting(currentLevelData.levelCompleteText + 
-                               "\n\n[SYSTEM MESSAGE]\nCONGRATULATIONS, BIT-27!");
-            }
-            else if (storyType == "LevelComplete")
-            {
-                storyText.text = AddTerminalFormatting(currentLevelData.levelCompleteText);
-            }
-            else
-            {
-                storyText.text = AddTerminalFormatting(currentLevelData.levelIntroText);
-            }
-        }
-        
-        if (continueButton != null && (storyType == "LevelComplete" || storyType == "GameComplete"))
-        {
-            continueButton.gameObject.SetActive(true);
-        }
-        
-        StartCoroutine(TitleGlowEffect());
+        Debug.Log("⏩ Skipping typewriter...");
+        skipRequested = true;
     }
     
     public void ContinueToNext()
     {
-        if (!canContinue) return;
+        if (!canContinue) 
+        {
+            Debug.Log("❌ Cannot continue yet - still in minimum display time");
+            return;
+        }
         
         if (audioSource != null && buttonClickSound != null)
         {
             audioSource.PlayOneShot(buttonClickSound);
         }
         
-        Debug.Log($"Loading next scene: {targetScene}");
+        Debug.Log($"🚀 Loading next scene: {targetScene}");
         SceneManager.LoadScene(targetScene);
     }
 }

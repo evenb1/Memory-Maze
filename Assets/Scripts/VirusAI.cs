@@ -18,6 +18,13 @@ public class VirusAI : MonoBehaviour
     public bool enableLightBeam = true;
     public float beamRange = 10f;
     
+    [Header("Smart AI Settings")]
+    public float virusAvoidanceRadius = 4f;
+    public float rotationSpeed = 3f;
+    
+    [Header("Collision Detection")]
+    public float catchDistance = 0.8f; // Distance to catch player - much closer!
+    
     [Header("Game Over Effects")]
     public float gameOverEffectTime = 2f;
     
@@ -30,8 +37,16 @@ public class VirusAI : MonoBehaviour
     private Material droneMaterial;
     private Light droneLight;
     
+    // Smart AI variables
+    private static System.Collections.Generic.List<VirusAI> allFlyingViruses = new System.Collections.Generic.List<VirusAI>();
+    private Vector3 lastKnownPlayerPosition;
+    private float lostPlayerTimer = 0f;
+    
     void Start()
     {
+        // Add to static list for avoidance
+        allFlyingViruses.Add(this);
+        
         GameObject playerObj = GameObject.FindWithTag("Player");
         if(playerObj != null)
         {
@@ -46,10 +61,17 @@ public class VirusAI : MonoBehaviour
         gameManager = FindFirstObjectByType<GameManager>();
         SetupDrone();
         basePosition = transform.position;
+        lastKnownPlayerPosition = basePosition;
         
         SetupCollider();
         
-        Debug.Log("Virus drone initialized - hunting for player!");
+        Debug.Log("Smart flying virus initialized - hunting for player!");
+    }
+    
+    void OnDestroy()
+    {
+        // Remove from static list when destroyed
+        allFlyingViruses.Remove(this);
     }
     
     void SetupCollider()
@@ -59,13 +81,17 @@ public class VirusAI : MonoBehaviour
         {
             SphereCollider sphereCol = gameObject.AddComponent<SphereCollider>();
             sphereCol.isTrigger = true;
-            sphereCol.radius = 1f;
-            Debug.Log("Added trigger collider to virus");
+            sphereCol.radius = 0.6f; // Smaller collider for more precise detection
+            Debug.Log($"Added trigger collider to virus with radius 0.6f");
         }
         else
         {
             col.isTrigger = true;
-            Debug.Log("Set existing collider as trigger");
+            if (col is SphereCollider sphereCol)
+            {
+                sphereCol.radius = 0.6f; // Smaller radius
+            }
+            Debug.Log("Set existing collider as trigger with smaller radius");
         }
     }
     
@@ -120,7 +146,10 @@ public class VirusAI : MonoBehaviour
     {
         if(player != null && !hasCaughtPlayer)
         {
-            HuntPlayer();
+            HuntPlayerSmart();
+            
+            // ENHANCED: Check distance-based collision for better detection
+            CheckProximityToPlayer();
         }
         
         if (!hasCaughtPlayer)
@@ -130,45 +159,166 @@ public class VirusAI : MonoBehaviour
         }
     }
     
-    void HuntPlayer()
+    void CheckProximityToPlayer()
+    {
+        if (player == null || hasCaughtPlayer) return;
+        
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        
+        // Only catch if VERY close - like actually touching
+        if (distanceToPlayer <= catchDistance)
+        {
+            Debug.Log($"🔥 CLOSE CONTACT! {gameObject.name} got within {distanceToPlayer:F2} units of player!");
+            TriggerPlayerCapture();
+        }
+    }
+    
+    void TriggerPlayerCapture()
+    {
+        if (hasCaughtPlayer) return;
+        
+        hasCaughtPlayer = true;
+        Debug.Log($"💀 GAME OVER! {gameObject.name} caught player!");
+        
+        // Start dramatic game over sequence
+        StartCoroutine(GameOverSequence(player));
+    }
+    
+    void HuntPlayerSmart()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         
         if(distanceToPlayer <= detectionRange)
         {
-            isHunting = true;
+            // Player detected - hunt mode
+            if (!isHunting)
+            {
+                isHunting = true;
+                Debug.Log($"{gameObject.name} detected player - HUNTING!");
+            }
             
-            Vector3 direction = (player.position - transform.position).normalized;
-            direction.y = 0;
+            lastKnownPlayerPosition = player.position;
+            lostPlayerTimer = 0f;
+            
+            Vector3 targetPosition = player.position;
+            
+            // Add virus avoidance to prevent clustering
+            Vector3 avoidanceVector = CalculateFlyingVirusAvoidance();
+            targetPosition += avoidanceVector;
+            
+            Vector3 direction = (targetPosition - transform.position).normalized;
             
             Vector3 newPosition = transform.position + direction * huntSpeed * Time.deltaTime;
-            newPosition.y = hoverHeight;
+            newPosition.y = hoverHeight; // Maintain flying height
             
             transform.position = newPosition;
             
-            Vector3 lookDirection = player.position - transform.position;
-            lookDirection.y = 0;
-            if (lookDirection != Vector3.zero)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 3f * Time.deltaTime);
-            }
+            // Face forward in movement direction
+            FaceDirection(direction);
+        }
+        else if (isHunting && lostPlayerTimer < 5f)
+        {
+            // Search last known position
+            lostPlayerTimer += Time.deltaTime;
+            SearchLastKnownPosition();
         }
         else
         {
-            isHunting = false;
+            // Lost player or not detected - patrol mode
+            if (isHunting)
+            {
+                isHunting = false;
+                Debug.Log($"{gameObject.name} lost player - returning to patrol");
+            }
             
-            float time = Time.time * patrolSpeed;
-            Vector3 patrolOffset = new Vector3(
-                Mathf.Sin(time) * 2f,
-                0,
-                Mathf.Cos(time * 0.7f) * 2f
-            );
+            PatrolArea();
+        }
+    }
+    
+    void SearchLastKnownPosition()
+    {
+        Vector3 direction = (lastKnownPlayerPosition - transform.position).normalized;
+        
+        if (Vector3.Distance(transform.position, lastKnownPlayerPosition) > 2f)
+        {
+            Vector3 newPosition = transform.position + direction * huntSpeed * 0.7f * Time.deltaTime;
+            newPosition.y = hoverHeight;
+            transform.position = newPosition;
             
-            Vector3 targetPosition = basePosition + patrolOffset;
-            targetPosition.y = hoverHeight;
-            
-            transform.position = Vector3.MoveTowards(transform.position, targetPosition, patrolSpeed * Time.deltaTime);
+            FaceDirection(direction);
+        }
+        else
+        {
+            // Reached last known position - give up hunt
+            lostPlayerTimer = 10f;
+        }
+    }
+    
+    void PatrolArea()
+    {
+        // Smart patrol behavior with virus avoidance
+        float time = Time.time * patrolSpeed;
+        Vector3 patrolOffset = new Vector3(
+            Mathf.Sin(time) * 2f,
+            0,
+            Mathf.Cos(time * 0.7f) * 2f
+        );
+        
+        // Add some randomness to avoid identical patrol patterns
+        patrolOffset += new Vector3(
+            Mathf.Sin(time * 1.3f + gameObject.GetInstanceID()) * 1f,
+            0,
+            Mathf.Cos(time * 0.9f + gameObject.GetInstanceID()) * 1f
+        );
+        
+        Vector3 targetPosition = basePosition + patrolOffset;
+        
+        // Add virus avoidance during patrol
+        Vector3 avoidanceVector = CalculateFlyingVirusAvoidance();
+        targetPosition += avoidanceVector;
+        
+        targetPosition.y = hoverHeight;
+        
+        Vector3 patrolDirection = (targetPosition - transform.position).normalized;
+        transform.position = Vector3.MoveTowards(transform.position, targetPosition, patrolSpeed * Time.deltaTime);
+        
+        // Face patrol direction
+        if (patrolDirection != Vector3.zero)
+        {
+            FaceDirection(patrolDirection);
+        }
+    }
+    
+    Vector3 CalculateFlyingVirusAvoidance()
+    {
+        Vector3 avoidanceVector = Vector3.zero;
+        
+        foreach (VirusAI otherVirus in allFlyingViruses)
+        {
+            if (otherVirus != this && otherVirus != null)
+            {
+                float distance = Vector3.Distance(transform.position, otherVirus.transform.position);
+                
+                if (distance < virusAvoidanceRadius && distance > 0.1f)
+                {
+                    // Calculate repulsion force
+                    Vector3 repulsion = (transform.position - otherVirus.transform.position).normalized;
+                    float strength = (virusAvoidanceRadius - distance) / virusAvoidanceRadius;
+                    avoidanceVector += repulsion * strength * 3f;
+                }
+            }
+        }
+        
+        return avoidanceVector;
+    }
+    
+    void FaceDirection(Vector3 direction)
+    {
+        if (direction != Vector3.zero)
+        {
+            // Create rotation that faces the movement direction
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
         }
     }
     
@@ -205,19 +355,18 @@ public class VirusAI : MonoBehaviour
     
     void OnTriggerEnter(Collider other)
     {
+        Debug.Log($"🎯 Virus {gameObject.name} triggered with: {other.gameObject.name}, Tag: {other.tag}");
+        
         if(other.CompareTag("Player") && !hasCaughtPlayer)
         {
-            hasCaughtPlayer = true;
-            Debug.Log("GAME OVER! Virus drone caught player!");
-            
-            // Start dramatic game over sequence
-            StartCoroutine(GameOverSequence(other.transform));
+            Debug.Log($"💀 TRIGGER CATCH! {gameObject.name} caught player via OnTriggerEnter!");
+            TriggerPlayerCapture();
         }
     }
     
     System.Collections.IEnumerator GameOverSequence(Transform caughtPlayer)
     {
-        Debug.Log("Starting virus capture sequence...");
+        Debug.Log($"{gameObject.name} starting virus capture sequence...");
         
         // Stop player movement immediately
         PlayerController playerController = caughtPlayer.GetComponent<PlayerController>();
@@ -231,7 +380,7 @@ public class VirusAI : MonoBehaviour
         if (mainCamera != null)
         {
             // Lock camera to current position/rotation
-            mainCamera.transform.SetParent(null); // Unparent from any object
+            mainCamera.transform.SetParent(null);
             Vector3 lockedPosition = mainCamera.transform.position;
             Quaternion lockedRotation = mainCamera.transform.rotation;
             
@@ -244,7 +393,7 @@ public class VirusAI : MonoBehaviour
         // Show capture message
         if (gameManager != null)
         {
-            gameManager.UpdateStatusMessage("SYSTEM BREACH! Virus has compromised BIT-27!");
+            gameManager.UpdateStatusMessage($"SYSTEM BREACH! {gameObject.name} has compromised BIT-27!");
         }
         
         // Create capture effects
@@ -345,7 +494,7 @@ public class VirusAI : MonoBehaviour
         }
         
         UnityEngine.UI.Image flashImage = flashPanel.AddComponent<UnityEngine.UI.Image>();
-        flashImage.color = new Color(1, 0, 0, 0); // Start transparent red
+        flashImage.color = new Color(1, 0, 0, 0);
         
         // Set to full screen
         RectTransform rect = flashPanel.GetComponent<RectTransform>();
@@ -436,6 +585,30 @@ public class VirusAI : MonoBehaviour
     {
         moveSpeed += speedBoost;
         huntSpeed += speedBoost;
-        Debug.Log($"Virus drone speed increased! New speed: {huntSpeed}");
+        Debug.Log($"{gameObject.name} speed increased! New speed: {huntSpeed}");
+    }
+    
+    // Debug visualization
+    void OnDrawGizmos()
+    {
+        // Show detection range
+        Gizmos.color = isHunting ? Color.red : Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
+        
+        // Show catch distance
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, catchDistance);
+        
+        // Show virus avoidance radius
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, virusAvoidanceRadius);
+        
+        // Show last known player position if searching
+        if (isHunting || lostPlayerTimer < 5f)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawWireSphere(lastKnownPlayerPosition, 0.5f);
+            Gizmos.DrawLine(transform.position, lastKnownPlayerPosition);
+        }
     }
 }
