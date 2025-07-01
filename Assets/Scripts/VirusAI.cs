@@ -25,6 +25,12 @@ public class VirusAI : MonoBehaviour
     [Header("Collision Detection")]
     public float catchDistance = 0.8f; // Distance to catch player - much closer!
     
+    [Header("Audio Settings")]
+    public AudioClip proximitySound;          // Sound when near player
+    public AudioClip huntingSound;            // Sound when hunting
+    public float proximityDistance = 5f;      // Distance to play proximity sound
+    public float audioVolume = 0.5f;
+    
     [Header("Game Over Effects")]
     public float gameOverEffectTime = 2f;
     
@@ -36,6 +42,10 @@ public class VirusAI : MonoBehaviour
     private Renderer droneRenderer;
     private Material droneMaterial;
     private Light droneLight;
+    
+    // Audio system
+    private AudioSource virusAudioSource;
+    private bool isPlayingProximitySound = false;
     
     // Smart AI variables
     private static System.Collections.Generic.List<VirusAI> allFlyingViruses = new System.Collections.Generic.List<VirusAI>();
@@ -60,12 +70,27 @@ public class VirusAI : MonoBehaviour
         
         gameManager = FindFirstObjectByType<GameManager>();
         SetupDrone();
+        SetupAudio();
         basePosition = transform.position;
         lastKnownPlayerPosition = basePosition;
         
         SetupCollider();
         
         Debug.Log("Smart flying virus initialized - hunting for player!");
+    }
+    
+    void SetupAudio()
+    {
+        // Add audio source for virus sounds
+        virusAudioSource = gameObject.AddComponent<AudioSource>();
+        virusAudioSource.volume = audioVolume;
+        virusAudioSource.spatialBlend = 1f; // 3D sound
+        virusAudioSource.rolloffMode = AudioRolloffMode.Linear;
+        virusAudioSource.minDistance = 2f;
+        virusAudioSource.maxDistance = proximityDistance * 2f;
+        virusAudioSource.loop = false;
+        
+        Debug.Log("Virus audio system setup complete");
     }
     
     void OnDestroy()
@@ -150,6 +175,9 @@ public class VirusAI : MonoBehaviour
             
             // ENHANCED: Check distance-based collision for better detection
             CheckProximityToPlayer();
+            
+            // AUDIO: Handle proximity and hunting sounds
+            HandleVirusAudio();
         }
         
         if (!hasCaughtPlayer)
@@ -173,9 +201,60 @@ public class VirusAI : MonoBehaviour
         }
     }
     
+    void HandleVirusAudio()
+    {
+        if (player == null || virusAudioSource == null) return;
+        
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        
+        // Play proximity sound when close to player
+        if (distanceToPlayer <= proximityDistance && !isPlayingProximitySound)
+        {
+            if (proximitySound != null && !virusAudioSource.isPlaying)
+            {
+                virusAudioSource.clip = proximitySound;
+                virusAudioSource.Play();
+                isPlayingProximitySound = true;
+                Debug.Log($"🔊 {gameObject.name} playing proximity sound - player at {distanceToPlayer:F1} units");
+            }
+        }
+        else if (distanceToPlayer > proximityDistance && isPlayingProximitySound)
+        {
+            isPlayingProximitySound = false;
+        }
+        
+        // Play hunting sound when actively hunting
+        if (isHunting && huntingSound != null && !virusAudioSource.isPlaying)
+        {
+            virusAudioSource.clip = huntingSound;
+            virusAudioSource.Play();
+            Debug.Log($"🎯 {gameObject.name} playing hunting sound");
+        }
+    }
+    
     void TriggerPlayerCapture()
     {
         if (hasCaughtPlayer) return;
+        
+        // Check if player has shield protection
+        PlayerShield playerShield = player.GetComponent<PlayerShield>();
+        if (playerShield != null && playerShield.IsShielded())
+        {
+            Debug.Log($"🛡️ Player is SHIELDED! {gameObject.name} cannot catch them!");
+            
+            // Bounce off the shield
+            Vector3 bounceDirection = (transform.position - player.position).normalized;
+            transform.position += bounceDirection * 2f;
+            
+            // Show shield deflection message
+            GameManager gameManager = FindFirstObjectByType<GameManager>();
+            if (gameManager != null)
+            {
+                gameManager.UpdateStatusMessage("SHIELD DEFLECTED VIRUS ATTACK!");
+            }
+            
+            return; // Don't catch the player
+        }
         
         hasCaughtPlayer = true;
         Debug.Log($"💀 GAME OVER! {gameObject.name} caught player!");
@@ -359,6 +438,26 @@ public class VirusAI : MonoBehaviour
         
         if(other.CompareTag("Player") && !hasCaughtPlayer)
         {
+            // Check if player has shield protection
+            PlayerShield playerShield = other.GetComponent<PlayerShield>();
+            if (playerShield != null && playerShield.IsShielded())
+            {
+                Debug.Log($"🛡️ Player is SHIELDED! {gameObject.name} bounced off!");
+                
+                // Bounce off the shield
+                Vector3 bounceDirection = (transform.position - other.transform.position).normalized;
+                transform.position += bounceDirection * 2f;
+                
+                // Show shield deflection message
+                GameManager gameManager = FindFirstObjectByType<GameManager>();
+                if (gameManager != null)
+                {
+                    gameManager.UpdateStatusMessage("SHIELD DEFLECTED VIRUS ATTACK!");
+                }
+                
+                return; // Don't catch the player
+            }
+            
             Debug.Log($"💀 TRIGGER CATCH! {gameObject.name} caught player via OnTriggerEnter!");
             TriggerPlayerCapture();
         }
@@ -598,6 +697,10 @@ public class VirusAI : MonoBehaviour
         // Show catch distance
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, catchDistance);
+        
+        // Show proximity audio range
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(transform.position, proximityDistance);
         
         // Show virus avoidance radius
         Gizmos.color = Color.cyan;

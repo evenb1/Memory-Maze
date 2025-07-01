@@ -91,6 +91,7 @@
     <Compile Include="Assets/Scripts/BackgroundMusic.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TMP_TextInfoDebugTool.cs" />
     <Compile Include="Assets/Scripts/ShieldBoost.cs" />
+    <Compile Include="Assets/Scripts/BackgroundMusicManager.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/VertexShakeA.cs" />
     <Compile Include="Assets/Scripts/LevelConfigs.cs" />
     <Compile Include="Assets/Scripts/DataFlicker.cs" />
@@ -135,6 +136,7 @@
     <Compile Include="Assets/Scripts/PortalBeacon.cs" />
     <Compile Include="Assets/Scripts/TerminalStatic.cs" />
     <Compile Include="Assets/TextMesh Pro/Examples &amp; Extras/Scripts/TextMeshProFloatingText.cs" />
+    <Compile Include="Assets/Scripts/PauseMenuManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets/TextMesh Pro/Shaders/TMPro.cginc" />
