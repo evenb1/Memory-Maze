@@ -133,11 +133,11 @@ public class GameManager : MonoBehaviour
             skyboxManager.OnFragmentCollected();
         }
         
-        PowerUpSpawner powerUpSpawner = FindFirstObjectByType<PowerUpSpawner>();
-        if (powerUpSpawner != null)
-        {
-            powerUpSpawner.OnFragmentCollected();
-        }
+     PowerUpManager powerUpManager = FindFirstObjectByType<PowerUpManager>();
+if (powerUpManager != null)
+{
+    powerUpManager.OnFragmentCollected();
+}
     }
     
     void UpdateUI()

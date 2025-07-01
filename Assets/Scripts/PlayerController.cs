@@ -4,6 +4,7 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     public float moveSpeed = 3f;
+    public float sprintSpeed = 5f;      // Sprint speed when holding Shift
     public float rotationSpeed = 5f;
     
     [Header("Simple Camera")]
@@ -52,7 +53,7 @@ public class PlayerController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         
-        Debug.Log($"PlayerController initialized. Base speed: {baseMovementSpeed}");
+        Debug.Log($"PlayerController initialized. Base speed: {baseMovementSpeed}, Sprint speed: {sprintSpeed}");
     }
     
     void Update()
@@ -77,6 +78,10 @@ public class PlayerController : MonoBehaviour
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
         
+        // Check if sprinting (Shift key held)
+        bool isSprinting = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        float currentSpeed = GetCurrentMoveSpeed(isSprinting);
+        
         // Movement relative to camera direction
         Vector3 forward = playerCamera.transform.forward;
         Vector3 right = playerCamera.transform.right;
@@ -89,8 +94,7 @@ public class PlayerController : MonoBehaviour
         
         if (moveDirection.magnitude > 0.1f)
         {
-            // Move character using current speed (includes speed boost if active)
-            float currentSpeed = GetCurrentMoveSpeed();
+            // Move character using current speed (includes speed boost and sprint)
             controller.Move(moveDirection * currentSpeed * Time.deltaTime);
             
             // Rotate character to face movement direction
@@ -99,8 +103,8 @@ public class PlayerController : MonoBehaviour
             
             if (animator != null)
             {
-                // Adjust animation speed based on speed boost
-                float animSpeedMultiplier = hasSpeedBoost ? currentSpeedMultiplier : 1f;
+                // Adjust animation speed based on current speed
+                float animSpeedMultiplier = currentSpeed / baseMovementSpeed;
                 animator.speed = animSpeedMultiplier;
                 animator.SetFloat("Blend", 0.5f); // Walking animation
             }
@@ -178,7 +182,7 @@ public class PlayerController : MonoBehaviour
         speedBoostTimeRemaining = duration;
         
         Debug.Log($"Speed boost applied! Multiplier: {multiplier}x for {duration}s");
-        Debug.Log($"New speed: {GetCurrentMoveSpeed():F1} (was {baseMovementSpeed})");
+        Debug.Log($"New speed: {GetCurrentMoveSpeed(false):F1} (was {baseMovementSpeed})");
         
         // Start visual effects
         if (showSpeedBoostGlow)
@@ -279,10 +283,18 @@ public class PlayerController : MonoBehaviour
         }
     }
     
-    // Get current movement speed (base speed * multiplier if boosted)
-    float GetCurrentMoveSpeed()
+    // Get current movement speed (base speed * multiplier if boosted, or sprint if sprinting)
+    float GetCurrentMoveSpeed(bool isSprinting = false)
     {
-        return hasSpeedBoost ? baseMovementSpeed * currentSpeedMultiplier : baseMovementSpeed;
+        float baseSpeed = hasSpeedBoost ? baseMovementSpeed * currentSpeedMultiplier : baseMovementSpeed;
+        
+        // If sprinting, use sprint speed (but still apply speed boost multiplier if active)
+        if (isSprinting)
+        {
+            return hasSpeedBoost ? sprintSpeed * currentSpeedMultiplier : sprintSpeed;
+        }
+        
+        return baseSpeed;
     }
     
     // Public getters for other systems
@@ -303,17 +315,46 @@ public class PlayerController : MonoBehaviour
     
     public float GetCurrentSpeed()
     {
-        return GetCurrentMoveSpeed();
+        bool isSprinting = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        return GetCurrentMoveSpeed(isSprinting);
+    }
+    
+    public bool IsSprinting()
+    {
+        return Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
     }
     
     // Debug method - remove in final build
     void OnGUI()
     {
-        if (hasSpeedBoost)
+        bool isSprinting = IsSprinting();
+        
+        if (hasSpeedBoost || isSprinting)
         {
-            GUI.color = Color.yellow;
-            GUI.Label(new Rect(10, 10, 200, 20), $"SPEED BOOST: {speedBoostTimeRemaining:F1}s");
-            GUI.Label(new Rect(10, 30, 200, 20), $"Speed: {GetCurrentMoveSpeed():F1}");
+            int yOffset = 10;
+            
+            if (hasSpeedBoost)
+            {
+                GUI.color = Color.yellow;
+                GUI.Label(new Rect(10, yOffset, 250, 20), $"SPEED BOOST: {speedBoostTimeRemaining:F1}s");
+                yOffset += 20;
+                GUI.Label(new Rect(10, yOffset, 250, 20), $"Boost Speed: {GetCurrentMoveSpeed(false):F1}");
+                yOffset += 20;
+            }
+            
+            if (isSprinting)
+            {
+                GUI.color = Color.cyan;
+                GUI.Label(new Rect(10, yOffset, 250, 20), $"SPRINTING: {GetCurrentMoveSpeed(true):F1}");
+                yOffset += 20;
+                GUI.Label(new Rect(10, yOffset, 250, 20), "Hold SHIFT to sprint");
+                yOffset += 20;
+            }
+            
+            // Show total current speed
+            GUI.color = Color.white;
+            GUI.Label(new Rect(10, yOffset, 250, 20), $"Current Speed: {GetCurrentSpeed():F1}");
+            
             GUI.color = Color.white;
         }
     }

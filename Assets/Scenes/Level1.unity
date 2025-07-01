@@ -388,7 +388,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.9528302, g: 0, b: 0.1612547, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -724,8 +724,8 @@ MonoBehaviour:
   beamColor: {r: 0, g: 1, b: 1, a: 1}
   pulseSpeed: 2
   isActive: 0
-  activationSound: {fileID: 0}
-  ambientHum: {fileID: 0}
+  activationSound: {fileID: 8300000, guid: 9ae9b9c3f4e9d462d97e048dda091f91, type: 3}
+  ambientHum: {fileID: 8300000, guid: e52b604f3ff1a4c1ab5c6de5aef6bfa4, type: 3}
 --- !u!114 &346817152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1708,7 +1708,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.8}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -1785,7 +1785,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -2042,7 +2042,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.307561, g: 0.9528302, b: 0.0764062, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -2891,7 +2891,7 @@ MonoBehaviour:
   virusAvoidanceRadius: 4
   rotationSpeed: 3
   catchDistance: 0.8
-  proximitySound: {fileID: 0}
+  proximitySound: {fileID: 8300000, guid: 9e4472650a358495b834098e08804822, type: 3}
   huntingSound: {fileID: 0}
   proximityDistance: 5
   audioVolume: 0.5
@@ -3000,7 +3000,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.582, g: 1, b: 1, a: 0.392}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
